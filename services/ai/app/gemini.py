@@ -25,9 +25,12 @@ def settings() -> dict[str, Any]:
     key = os.getenv('GEMINI_API_KEY', '').strip()
     model = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip() or 'gemini-3.5-flash-lite'
     try:
-        timeout = float(os.getenv('GEMINI_TIMEOUT_SECONDS', '25'))
+        # Gemini generation (especially PDF/OCR prompts) can legitimately take
+        # longer than a normal API request. Keep the timeout bounded but avoid
+        # returning a misleading 503 while the provider is still processing.
+        timeout = float(os.getenv('GEMINI_TIMEOUT_SECONDS', '60'))
     except ValueError:
-        timeout = 25.0
+        timeout = 60.0
     return {'enabled': enabled, 'configured': bool(key), 'model': model, 'timeout': max(3.0, timeout), 'key': key}
 
 

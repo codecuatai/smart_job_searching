@@ -22,9 +22,9 @@ def ai_request(path, body=None):
                 return deepcopy(saved[1])
     try:
         try:
-            timeout = max(35, float(os.getenv('GEMINI_TIMEOUT_SECONDS', '25')) + 10)
+            timeout = max(70, float(os.getenv('GEMINI_TIMEOUT_SECONDS', '60')) + 10)
         except ValueError:
-            timeout = 35
+            timeout = 70
         result = None
         for attempt in range(1):
             try:

@@ -26,7 +26,7 @@ Lệnh tạo `.env` nếu thiếu và không ghi đè cấu hình đang có. Gi�
 | GEMINI_API_KEY | trống | API key Gemini từ Google AI Studio; chỉ đặt trong `.env`, không commit |
 | GEMINI_MODEL | gemini-3.5-flash-lite | Model Gemini dùng cho tác vụ sinh nội dung |
 | GEMINI_ENABLED | true | Bật Gemini; khi false hoặc thiếu key, AI dùng fallback local |
-| GEMINI_TIMEOUT_SECONDS | 25 | Timeout mỗi request Gemini |
+| GEMINI_TIMEOUT_SECONDS | 60 | Timeout mỗi request Gemini (tăng cho prompt CV/OCR dài) |
 
 Biến tùy chọn, chỉ thêm vào cùng `.env` khi cần:
 

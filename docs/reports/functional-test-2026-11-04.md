@@ -12,7 +12,7 @@ Vòng mới nhất: 19/19 backend, lint/typecheck qua; Docker E2E **22/22 passed
 
 Đã mở rộng thành 11 kịch bản × desktop/mobile. Ngoài luồng đăng nhập/ứng tuyển/lịch/BI, kiểm tra thêm PDF rỗng, mật khẩu mở, hạn chế quyền không cần mật khẩu, quá 30 trang, quá 5 MB, PDF không có lớp chữ và PDF có BOM. Kiểm tra thông báo lỗi cố định, giữ nguyên CV cũ khi lỗi, đọc lại sau reload và đối chiếu SHA-256 file tải về. Bổ sung validation tài khoản/hồ sơ và tìm kiếm/xóa bộ lọc job/ứng viên.
 
-Ca phỏng vấn chờ response API thay vì đòi UI có kết quả trong 10 giây. Cả hai lần desktop/mobile trả HTTP 200, lưu đúng lịch sử và dùng `gemini:gemini-3.5-flash-lite`. Giới hạn API timeout 15 giây/Gemini 25 giây chưa thay đổi; lần chạy thành công không chứng minh mọi điều kiện mạng đều ổn.
+Ca phỏng vấn chờ response API thay vì đòi UI có kết quả trong 10 giây. Cả hai lần desktop/mobile trả HTTP 200, lưu đúng lịch sử và dùng `gemini:gemini-3.5-flash-lite`. Gemini có timeout cấu hình 60 giây và API client chờ thêm 10 giây để tránh bỏ cuộc trước provider.
 
 Web/API/AI healthy, integrity_check=ok, 639 job (635 ITviec + 4 demo), 0 job E2E sau cleanup. Tài khoản/CV synthetic vẫn được giữ trong DB test. Các giới hạn chưa OCR, upload chưa gọi Gemini skills và nhận diện phủ định chưa sửa vẫn còn nguyên; không coi E2E xanh là bằng chứng chất lượng mô hình.
 
@@ -50,7 +50,7 @@ Gọi API phỏng vấn qua web proxy: 200 trong 3,91 giây, `method=gemini:gemi
 Điều này xác nhận Gemini hoạt động, nhưng không chứng minh upload CV đã tích hợp Gemini.
 
 Ca desktop thất bại là bằng chứng độ trễ biến động vượt ngưỡng E2E 10 giây; chưa đủ bằng chứng kết luận mọi request phỏng vấn bị lỗi.
-API client đang timeout 15 giây trong khi Gemini timeout mặc định 25 giây, cần đồng bộ để tránh API bỏ cuộc trước khi AI trả response/fallback.
+API client phải chờ dài hơn timeout Gemini; cấu hình hiện tại là tối đa 70 giây cho client và 60 giây cho provider, phù hợp với prompt CV/OCR dài.
 
 ## Trạng thái sau test
 
