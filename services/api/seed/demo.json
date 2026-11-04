@@ -1,0 +1,372 @@
+{
+  "jobs": [
+    {
+      "id": "job-01",
+      "title": "Junior Java Backend Engineer (Spring Boot 3.3)",
+      "company": "VNG Corporation",
+      "logoText": "VNG",
+      "location": "TP. Hồ Chí Minh (VNG Campus)",
+      "workType": "Full-time",
+      "salary": "14.000.000 - 18.000.000 VNĐ",
+      "postedAt": "Hôm nay",
+      "category": "backend",
+      "tags": [
+        "Java 21",
+        "Spring Boot 3.3",
+        "PostgreSQL",
+        "Kafka"
+      ],
+      "matchScore": 94,
+      "projectSubstituteNote": "Đồ án E-Commerce Microservices thay thế 1.5 năm kinh nghiệm làm việc",
+      "astCleanCodeScore": 92,
+      "description": "Tham gia xây dựng hệ sinh thái cổng thanh toán ZaloPay và dịch vụ dữ liệu lớn. Tối ưu kiến trúc vi dịch vụ với Spring Boot 3.3 và Apache Kafka.",
+      "requirements": [
+        "Nắm vững lập trình hướng đối tượng OOP và nguyên lý thiết kế SOLID",
+        "Thực hành tốt với Spring Boot 3.3, Spring Data JPA, Spring Security JWT",
+        "Hiểu biết cơ chế message queue với Apache Kafka hoặc RabbitMQ",
+        "Đồ án môn học hoặc cá nhân có cấu trúc clean code (được thẩm định AST tự động)"
+      ],
+      "benefits": [
+        "Môi trường làm việc chuẩn quốc tế tại VNG Campus Quận 7",
+        "Gói bảo hiểm sức khỏe toàn diện PTI Healthcare",
+        "Trợ cấp ăn trưa, phòng gym, xe đưa rước nội bộ"
+      ],
+      "missingSkills": [
+        "Kubernetes cơ bản",
+        "Docker Compose nâng cao"
+      ]
+    },
+    {
+      "id": "job-02",
+      "title": "Junior Data Analyst / BI Specialist (Star Schema)",
+      "company": "Shopee Vietnam",
+      "logoText": "SHO",
+      "location": "TP. Hồ Chí Minh (Saigon Centre)",
+      "workType": "Full-time",
+      "salary": "15.000.000 - 20.000.000 VNĐ",
+      "postedAt": "1 ngày trước",
+      "category": "ai",
+      "tags": [
+        "ClickHouse",
+        "Star Schema",
+        "SQL",
+        "FastAPI"
+      ],
+      "matchScore": 91,
+      "projectSubstituteNote": "Đồ án Kho dữ liệu môn BI thay thế hoàn toàn yêu cầu 1 năm kinh nghiệm ETL",
+      "astCleanCodeScore": 89,
+      "description": "Xây dựng mô hình dữ liệu đa chiều Star Schema cho sàn thương mại điện tử, trích xuất dữ liệu ClickHouse OLAP phục vụ báo cáo kinh doanh thời gian thực.",
+      "requirements": [
+        "Thành thạo SQL nâng cao (Window functions, CTE, Subqueries tối ưu)",
+        "Hiểu sâu kiến trúc Data Warehouse: Fact table, Dimension table, SCD Type 2",
+        "Biết xây dựng API trích xuất dữ liệu bằng Python FastAPI hoặc Spring Boot",
+        "Kinh nghiệm trực quan hóa dữ liệu qua Metabase, Power BI hoặc Apache Superset"
+      ],
+      "benefits": [
+        "Thưởng hiệu suất kinh doanh hằng quý cực kỳ cạnh tranh",
+        "Cung cấp MacBook Pro M3 Pro chính hãng",
+        "Chế độ Hybrid linh hoạt 2 ngày làm việc tại nhà"
+      ],
+      "missingSkills": [
+        "Apache Airflow ETL DAGs",
+        "ClickHouse Partitioning"
+      ]
+    },
+    {
+      "id": "job-03",
+      "title": "Cloud Platform & DevOps Intern",
+      "company": "Viettel Digital Services",
+      "logoText": "VDS",
+      "location": "Hà Nội & TP. HCM",
+      "workType": "Internship",
+      "salary": "7.000.000 - 10.000.000 VNĐ",
+      "postedAt": "2 ngày trước",
+      "category": "devops",
+      "tags": [
+        "Docker",
+        "Kubernetes",
+        "CI/CD GitHub Actions",
+        "Linux"
+      ],
+      "matchScore": 88,
+      "projectSubstituteNote": "Đồ án triển khai tự động CI/CD đạt điểm tối đa môn Hệ thống phân tán",
+      "astCleanCodeScore": 90,
+      "description": "Hỗ trợ đội ngũ SRE vận hành hạ tầng đám mây cho các sản phẩm số Viettel Money, triển khai pipeline CI/CD và giám sát hệ thống bằng Prometheus & Grafana.",
+      "requirements": [
+        "Sử dụng thành thạo Linux command line và Bash script",
+        "Nắm vững Docker containerization và Docker Compose",
+        "Biết viết GitHub Actions pipeline tự động build, test và deploy",
+        "Tinh thần ham học hỏi, chủ động giải quyết vấn đề kỹ thuật"
+      ],
+      "benefits": [
+        "Cơ hội chuyển tiếp lên nhân viên chính thức sau 3 tháng thực tập",
+        "Được đào tạo trực tiếp bởi các SRE & Cloud Architect đầu ngành",
+        "Hỗ trợ dấu mộc thực tập và chữ ký đánh giá khóa luận tốt nghiệp"
+      ],
+      "missingSkills": [
+        "Helm Charts",
+        "Terraform IaC"
+      ]
+    },
+    {
+      "id": "job-04",
+      "title": "Frontend React/Next.js Engineer",
+      "company": "FPT Software (F-Complex)",
+      "logoText": "FPT",
+      "location": "Đà Nẵng / TP. HCM",
+      "workType": "Full-time",
+      "salary": "12.000.000 - 16.000.000 VNĐ",
+      "postedAt": "3 ngày trước",
+      "category": "frontend",
+      "tags": [
+        "React 18",
+        "Next.js",
+        "TypeScript",
+        "Tailwind CSS"
+      ],
+      "matchScore": 85,
+      "projectSubstituteNote": "Đồ án Web thương mại điện tử responsive đạt giải Nghiên cứu Khoa học",
+      "astCleanCodeScore": 91,
+      "description": "Phát triển giao diện ứng dụng web cho khách hàng Nhật Bản và Bắc Mỹ. Áp dụng chuẩn thiết kế hiện đại, tối ưu SEO và Core Web Vitals.",
+      "requirements": [
+        "Nắm chắc TypeScript, ES6+, React Hooks và State Management",
+        "Kinh nghiệm làm việc với Next.js App Router và Tailwind CSS",
+        "Hiểu rõ về Web Performance Optimization và Responsive Design"
+      ],
+      "benefits": [
+        "Gói đào tạo tiếng Nhật / tiếng Anh chuyên ngành có phụ cấp chứng chỉ",
+        "Cơ hội onsite ngắn hạn hoặc dài hạn tại Tokyo (Nhật Bản)",
+        "Khuôn viên văn phòng xanh tiêu chuẩn quốc tế F-Complex"
+      ],
+      "missingSkills": [
+        "Next.js Server Actions",
+        "Jest / Playwright E2E Testing"
+      ]
+    }
+  ],
+  "students": [
+    {
+      "id": "cand-001",
+      "name": "Nam Nguyễn",
+      "university": "Trường Đại học Bách Khoa (ĐHQG TP.HCM)",
+      "major": "Kỹ thuật Phần mềm (Khoa CNTT - K21)",
+      "year": "Năm 4 (Dự kiến tốt nghiệp 12/2026)",
+      "gpa": 3.62,
+      "email": "nam.nguyen@hcmut.edu.vn",
+      "avatarText": "N",
+      "targetRole": "Junior Java Backend / Data Platform Engineer",
+      "matchScore": 94,
+      "status": "interview",
+      "appliedDate": "18/10/2026",
+      "astAudit": {
+        "cleanCodeScore": 92,
+        "solidCompliance": 90,
+        "plagiarismPercentage": 2.8,
+        "cyclomaticComplexity": "Thấp (Trung bình 3.2 per method)",
+        "securityVulnerabilities": 0,
+        "verifiedCommitCount": 148
+      },
+      "featuredProject": {
+        "title": "E-Commerce Microservices & Realtime Analytics Engine",
+        "repo": "https://github.com/namnguyen-dev/ecommerce-microservices-backend",
+        "techStack": [
+          "Java 21",
+          "Spring Boot 3.3",
+          "FastAPI",
+          "ClickHouse",
+          "PostgreSQL",
+          "Kafka"
+        ],
+        "summary": "Hệ thống thương mại điện tử phân tán xử lý 5.000 đơn hàng/giây. Tách biệt kiến trúc CQRS, tích hợp kho dữ liệu Star Schema ClickHouse phục vụ phân tích OLAP.",
+        "score": 95
+      },
+      "voiceAiAssessment": {
+        "overallScore": 88,
+        "technicalDepth": 90,
+        "problemSolving": 87,
+        "communication": 86,
+        "feedbackSummary": "Ứng viên trả lời rành mạch kiến trúc phân tầng Spring Boot 3.3, giải thích cặn kẽ cách xử lý giao dịch phân tán và chống duplicate message trong Kafka. Tư duy hệ thống rất chững chạc so với sinh viên năm cuối.",
+        "completedAt": "20/10/2026 - 15:45"
+      },
+      "skillsRadar": [
+        {
+          "skill": "Java & Spring Boot 3.3",
+          "candidateScore": 92,
+          "marketBenchmark": 70
+        },
+        {
+          "skill": "SQL & Data Warehouse (Star Schema)",
+          "candidateScore": 88,
+          "marketBenchmark": 65
+        },
+        {
+          "skill": "Microservices & Kafka",
+          "candidateScore": 85,
+          "marketBenchmark": 60
+        },
+        {
+          "skill": "Clean Code & SOLID (AST Verified)",
+          "candidateScore": 91,
+          "marketBenchmark": 68
+        },
+        {
+          "skill": "Docker & CI/CD Pipeline",
+          "candidateScore": 78,
+          "marketBenchmark": 72
+        },
+        {
+          "skill": "Voice AI Phỏng vấn Kỹ thuật",
+          "candidateScore": 88,
+          "marketBenchmark": 65
+        }
+      ]
+    },
+    {
+      "id": "cand-002",
+      "name": "Trần Thị Thu Thảo",
+      "university": "Trường ĐH Khoa học Tự nhiên TP.HCM",
+      "major": "Khoa học Dữ liệu (K21)",
+      "year": "Năm 4",
+      "gpa": 3.75,
+      "email": "thuthao.tran@fit.hcmus.edu.vn",
+      "avatarText": "T",
+      "targetRole": "Data Analyst / BI Specialist",
+      "matchScore": 92,
+      "status": "reviewing",
+      "appliedDate": "19/10/2026",
+      "astAudit": {
+        "cleanCodeScore": 89,
+        "solidCompliance": 86,
+        "plagiarismPercentage": 1.9,
+        "cyclomaticComplexity": "Thấp (2.8)",
+        "securityVulnerabilities": 0,
+        "verifiedCommitCount": 112
+      },
+      "featuredProject": {
+        "title": "ClickHouse Data Mart for Fintech Fraud Detection",
+        "repo": "https://github.com/thuthao-ds/clickhouse-fintech-etl",
+        "techStack": [
+          "Python",
+          "ClickHouse",
+          "SQL Star Schema",
+          "FastAPI"
+        ],
+        "summary": "Pipeline ETL tự động gom 10 triệu bản ghi thanh toán, xây dựng bảng Fact/Dim theo mô hình Star Schema.",
+        "score": 93
+      },
+      "voiceAiAssessment": {
+        "overallScore": 86,
+        "technicalDepth": 88,
+        "problemSolving": 85,
+        "communication": 85,
+        "feedbackSummary": "Thành thạo SQL Window functions, trình bày rõ ràng cơ chế phân mảnh ClickHouse.",
+        "completedAt": "21/10/2026 - 09:30"
+      },
+      "skillsRadar": [
+        {
+          "skill": "Java & Spring Boot 3.3",
+          "candidateScore": 60,
+          "marketBenchmark": 70
+        },
+        {
+          "skill": "SQL & Data Warehouse (Star Schema)",
+          "candidateScore": 94,
+          "marketBenchmark": 65
+        },
+        {
+          "skill": "Microservices & Kafka",
+          "candidateScore": 72,
+          "marketBenchmark": 60
+        },
+        {
+          "skill": "Clean Code & SOLID (AST Verified)",
+          "candidateScore": 88,
+          "marketBenchmark": 68
+        },
+        {
+          "skill": "Docker & CI/CD Pipeline",
+          "candidateScore": 75,
+          "marketBenchmark": 72
+        },
+        {
+          "skill": "Voice AI Phỏng vấn Kỹ thuật",
+          "candidateScore": 86,
+          "marketBenchmark": 65
+        }
+      ]
+    },
+    {
+      "id": "cand-003",
+      "name": "Lê Hoàng Nam",
+      "university": "Đại học Bách Khoa Hà Nội (HUST)",
+      "major": "Kỹ thuật Máy tính (K65)",
+      "year": "Năm cuối",
+      "gpa": 3.48,
+      "email": "nam.lh@hust.edu.vn",
+      "avatarText": "L",
+      "targetRole": "Junior Backend Engineer",
+      "matchScore": 87,
+      "status": "submitted",
+      "appliedDate": "21/10/2026",
+      "astAudit": {
+        "cleanCodeScore": 86,
+        "solidCompliance": 84,
+        "plagiarismPercentage": 4.1,
+        "cyclomaticComplexity": "Trung bình (4.1)",
+        "securityVulnerabilities": 0,
+        "verifiedCommitCount": 95
+      },
+      "featuredProject": {
+        "title": "High-Concurrency Ticket Booking System",
+        "repo": "https://github.com/namlh-dev/ticket-booking-backend",
+        "techStack": [
+          "Go",
+          "PostgreSQL",
+          "Redis Distributed Lock"
+        ],
+        "summary": "Xử lý đặt vé xem phim chống overbooking bằng Redis Lock phân tán.",
+        "score": 88
+      },
+      "voiceAiAssessment": {
+        "overallScore": 82,
+        "technicalDepth": 84,
+        "problemSolving": 82,
+        "communication": 80,
+        "feedbackSummary": "Hiểu tốt về concurrency và race condition, cần cải thiện phong thái diễn đạt tự tin hơn.",
+        "completedAt": "21/10/2026 - 14:15"
+      },
+      "skillsRadar": [
+        {
+          "skill": "Java & Spring Boot 3.3",
+          "candidateScore": 75,
+          "marketBenchmark": 70
+        },
+        {
+          "skill": "SQL & Data Warehouse (Star Schema)",
+          "candidateScore": 78,
+          "marketBenchmark": 65
+        },
+        {
+          "skill": "Microservices & Kafka",
+          "candidateScore": 84,
+          "marketBenchmark": 60
+        },
+        {
+          "skill": "Clean Code & SOLID (AST Verified)",
+          "candidateScore": 85,
+          "marketBenchmark": 68
+        },
+        {
+          "skill": "Docker & CI/CD Pipeline",
+          "candidateScore": 82,
+          "marketBenchmark": 72
+        },
+        {
+          "skill": "Voice AI Phỏng vấn Kỹ thuật",
+          "candidateScore": 82,
+          "marketBenchmark": 65
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+"""UniTalent application backend."""

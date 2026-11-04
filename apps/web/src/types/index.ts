@@ -1,0 +1,126 @@
+export type RoleType = 'student' | 'recruiter';
+
+export type JobCategory = 'all' | 'backend' | 'frontend' | 'ai' | 'devops' | 'mobile';
+
+export type ApplicationStage = 'submitted' | 'reviewing' | 'interview' | 'offered';
+
+export interface Job {
+  id: string;
+  isDemo?: boolean;
+  explanation?: string;
+  matchedSkills?: string[];
+  title: string;
+  company: string;
+  logoText: string;
+  location: string;
+  workType: 'Full-time' | 'Internship' | 'Part-time';
+  salary: string;
+  postedAt: string;
+  category: JobCategory;
+  tags: string[];
+  matchScore: number;
+  projectSubstituteNote: string;
+  astCleanCodeScore: number;
+  description: string;
+  requirements: string[];
+  benefits: string[];
+  missingSkills?: string[];
+}
+
+export interface Candidate {
+  id: string;
+  name: string;
+  university: string;
+  major: string;
+  year: string;
+  gpa: number;
+  email: string;
+  avatarText: string;
+  targetRole: string;
+  matchScore: number;
+  status: ApplicationStage;
+  appliedDate: string;
+  astAudit: {
+    cleanCodeScore: number;
+    solidCompliance: number;
+    plagiarismPercentage: number;
+    cyclomaticComplexity: string;
+    securityVulnerabilities: number;
+    verifiedCommitCount: number;
+  };
+  featuredProject: {
+    title: string;
+    repo: string;
+    techStack: string[];
+    summary: string;
+    score: number;
+  };
+  voiceAiAssessment: {
+    overallScore: number;
+    technicalDepth: number;
+    problemSolving: number;
+    communication: number;
+    feedbackSummary: string;
+    completedAt: string;
+  };
+  skillsRadar: {
+    skill: string;
+    candidateScore: number;
+    marketBenchmark: number;
+  }[];
+}
+
+export interface ApplicationTrackingItem {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  company: string;
+  stage: ApplicationStage;
+  updatedAt: string;
+  matchScore: number;
+  note: string;
+  interviewSchedule?: {
+    date: string;
+    time: string;
+    format: string;
+    interviewer: string;
+  };
+}
+
+export interface SkillGapItem {
+  skill: string;
+  currentLevel: string;
+  requiredLevel: string;
+  importance: 'critical' | 'recommended' | 'optional';
+  gapDescription: string;
+}
+
+export interface RoadmapStep {
+  week: number;
+  timeRange: string;
+  focusTitle: string;
+  milestones: string[];
+  curatedResource: string;
+}
+
+export interface SkillGapDiagnosis {
+  targetJobTitle: string;
+  company: string;
+  currentScore: number;
+  projectedScore: number;
+  gaps: SkillGapItem[];
+  roadmap: RoadmapStep[];
+}
+
+export interface MarketStatItem {
+  skill: string;
+  demandPercentage: number;
+  supplyPercentage: number;
+  shortagePercentage: number;
+}
+
+export interface CategoryDistribution {
+  category: string;
+  percentage: number;
+  jobCount: number;
+}

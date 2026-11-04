@@ -1,0 +1,36 @@
+{
+  "name": "@unitalent/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ../../scripts/web.mjs dev",
+    "build": "node ../../scripts/web.mjs build",
+    "start": "node ../../scripts/web.mjs start",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report ../../artifacts/e2e/report --host 127.0.0.1 --port 9323"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "lucide-react": "^1.61.0",
+    "next": "15.5.28",
+    "react": "19.3.1",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "^20",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "^8",
+    "eslint-config-next": "15.5.28",
+    "postcss": "8.5.32",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "8.5.32"
+  }
+}

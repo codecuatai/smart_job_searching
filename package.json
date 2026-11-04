@@ -1,0 +1,21 @@
+{
+  "name": "unitalent-ai",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/web.mjs build",
+    "lint": "npm --prefix apps/web run lint",
+    "typecheck": "npm --prefix apps/web run typecheck",
+    "test": "node scripts/test.mjs",
+    "test:e2e": "npm --prefix apps/web run test:e2e",
+    "test:e2e:report": "npm --prefix apps/web run test:e2e:report",
+    "git:check": "node scripts/check-staged.mjs",
+    "git:hooks": "git config core.hooksPath .githooks",
+    "env:init": "node scripts/env-init.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
