@@ -47,3 +47,16 @@ def test_must_have_and_experience_are_explicit_features():
     assert factors['mustHaveCoverage']['value'] == 0
     assert factors['experienceFit']['value'] == .5
     assert factors['experienceFit']['weight'] == 0  # Baseline does not pretend to use a new feature.
+
+
+def test_sparse_crawled_tags_do_not_inflate_one_skill_match():
+    job = {'id': 'sparse', 'tags': ['Data Analysis', 'SQL'], 'requirements': [], 'description': ''}
+    result = match('SQL', job)
+    assert result['matchedSkills'] == ['SQL']
+    assert result['missingSkills'] == ['Data Analysis']
+    assert result['matchScore'] < 70
+
+
+def test_blank_profile_stays_zero_even_for_single_tag_job():
+    result = match('', {'id': 'single', 'tags': ['SQL'], 'requirements': [], 'description': 'SQL reporting'})
+    assert result['matchScore'] == 0

@@ -33,6 +33,22 @@ SKILLS = {
     'TensorFlow': ['tensorflow'], 'PyTorch': ['pytorch'], 'NLP': ['natural language processing', 'nlp'],
     'Testing': ['pytest', 'jest', 'playwright', 'unit test', 'testing'],
     'REST API': ['rest api', 'restful'], 'SOLID': ['solid'],
+    # Common non-code tags from ITviec/TopCV feeds. Keeping these in the same
+    # taxonomy prevents a job with "SQL + Data Analysis" from looking like a
+    # one-skill job and inflating the calibrated score.
+    'Data Analysis': ['data analysis', 'data analyst', 'data analytics'],
+    'Business Analysis': ['business analysis', 'business analyst'],
+    'English': ['english', 'tieng anh'], 'Japanese': ['japanese', 'tieng nhat'],
+    'Figma': ['figma'], 'Product Management': ['product management', 'product manager'],
+    'Project Management': ['project management', 'project manager'],
+    'Agile': ['agile'], 'Scrum': ['scrum'], 'Cloud': ['cloud'], 'DevOps': ['devops'],
+    'Database': ['database'], 'Excel': ['excel'],
+    'QA/QC': ['qa qc', 'qa/qc', 'quality assurance', 'quality control'],
+    'Tester': ['tester'], 'Automation Testing': ['automation test', 'automation testing'],
+    'ERP': ['erp'], 'LLM': ['llm', 'large language model'],
+    'Software Architecture': ['software architecture'], 'Microservices': ['microservices'],
+    'Communication': ['communication', 'giao tiep'], 'Team Management': ['team management'],
+    'Data Visualization': ['data visualization', 'truc quan hoa du lieu'],
 }
 
 
@@ -116,9 +132,15 @@ def match(profile_text, job):
     required, matched, missing, coverage, similarity, required_ratio = matching_features(profile_text, job)
     features = feature_values(profile_text, job, MATCHING_MODEL.get('idf'))
     similarity = features['cosineSimilarity']
-    if not required:
-        score = round(100 * similarity)
-        method = 'baseline-v1'
+    if not profile_text.strip() or not extract_skills(profile_text):
+        # A blank profile/CV must never receive a non-zero recommendation score.
+        score = 0
+        method = MATCHING_MODEL['version']
+    elif not required:
+        # No recognized requirements means there is not enough evidence to
+        # claim a strong match, even when generic prose happens to overlap.
+        score = min(round(100 * similarity), 20)
+        method = MATCHING_MODEL['version']
     elif not matched:
         score = 0
         method = MATCHING_MODEL['version']
@@ -131,6 +153,10 @@ def match(profile_text, job):
     else:
         score = round(100 * (0.85 * coverage + 0.15 * similarity))
         method = 'baseline-v1'
+    if len(required) == 1 and matched:
+        # One generic tag (most often SQL/English) is weak evidence. Keep the
+        # ranking useful but prevent a one-skill job from displaying 90%+.
+        score = min(score, 65)
     return {'matchScore': score, 'matchedSkills': matched, 'missingSkills': missing,
             'coverage': round(coverage, 4), 'cosineSimilarity': round(similarity, 4),
             'modelVersion': MATCHING_MODEL['version'], 'method': method,
