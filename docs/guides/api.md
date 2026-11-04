@@ -100,7 +100,8 @@ Ngày/giờ theo giờ Việt Nam. Gửi stage khác có thể bỏ schedule; l�
 | GET | `/api/interview/questions` | student | Danh sách `{id,question}` |
 | POST | `/api/interview/evaluate` | student | `{questionId,answer}` (1–10.000 ký tự); lưu lịch sử |
 | GET | `/api/interview/history` | student | Tối đa 50 lượt mới nhất của mình |
-| GET | `/api/analytics` | recruiter | `totalJobs,totalStudents,marketStats,categoryDistribution,scope,updatedAt` |
+| GET | `/api/analytics` | recruiter | `totalJobs,totalStudents,marketStats,categoryDistribution,salaryStats,hiringFunnel,totalApplications,scope,updatedAt`; hỗ trợ `category` |
+| GET | `/api/analytics/export.csv` | recruiter | Xuất các quan sát skill demand và salary dạng CSV; hỗ trợ `category` |
 
 Analytics dùng nhãn kỹ năng chính xác, tỷ lệ lấy mẫu số là tổng jobs / tổng student trong database. Thiếu hụt = max(0, nhu cầu − nguồn cung); đây là điểm phần trăm, không phải tỷ lệ tăng trưởng. `salaryStats` tổng hợp khoảng lương trung bình theo ngành từ tin có chuỗi lương phân tích được; `hiringFunnel` đếm số hồ sơ từng đạt đến mỗi giai đoạn và tỷ lệ so với giai đoạn liền trước, còn `totalApplications` là số đơn thuộc các tin của nhà tuyển dụng đang đăng nhập. Giai đoạn được ghi vào `application_stage_events`; dữ liệu đơn cũ được khởi tạo từ trạng thái hiện tại khi nâng schema. Các thống kê lương vẫn chỉ phản ánh tin trong hệ thống, không đại diện thị trường lao động bên ngoài. Xem [AI README](../../services/ai/README.md) về điểm rubric.
 

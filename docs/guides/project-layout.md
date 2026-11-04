@@ -19,7 +19,7 @@ Bản mới ưu tiên vai trò và vòng đời của file: source ứng dụng,
 | tools/assets/ | docs/diagrams/ | Dùng một bộ sơ đồ; đã đối chiếu SHA-256 trước khi bỏ bản sao |
 | backend/data/ | var/data/ | Dữ liệu bền vững, private; không phải source |
 | .scratch/e2e/ | artifacts/e2e/ | Kết quả test có tên rõ ràng, không đưa lên Git |
-| .env.example + frontend/.env.example | .env ở root | Một nguồn cấu hình; setup tạo lại mặc định bằng mã nguồn |
+| .env.example + frontend/.env.example | `.env.example` ở root + `.env` local | Một template cấu hình không secret; key Gemini chỉ ở `.env` |
 
 `media/` giữ nguyên tên và toàn bộ nội dung vì chứa video/phụ đề cá nhân. `.agents/` giữ lại vì là cấu hình công cụ phát triển đã có, không phải file runtime thừa. `.venv` và node_modules giữ để tiếp tục chạy được; chúng bị Git/Docker context bỏ qua.
 

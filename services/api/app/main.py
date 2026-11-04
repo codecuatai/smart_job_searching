@@ -1,4 +1,5 @@
 import io
+import csv
 import json
 import os
 import re
@@ -11,12 +12,13 @@ from datetime import datetime, timezone
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from pypdf import PdfReader
-from .db import db, dump, init_db
+from .db import db, dump, index_candidate_skills, index_job_skills, index_resume_extraction, init_db
 from services.config import allowed_origins
 from .security import current_user, hash_password, require_role, token_hash, verify_password
 from .schemas import Answer, ApplyInput, JobInput, Login, Profile, Register, StageInput
 from .seed import seed_demo
 from .ai_client import ai_request
+from .job_maintenance import delete_job
 
 student_only = require_role('student')
 recruiter_only = require_role('recruiter')
@@ -172,6 +174,7 @@ def profile(user=Depends(student_only)):
 def update_profile(body: Profile, user=Depends(student_only)):
     with db() as c:
         c.execute('UPDATE users SET profile=? WHERE id=?', (dump(body.model_dump()), user['id']))
+        index_candidate_skills(c, user['id'], ' '.join([body.targetRole, *body.skills, body.projectTitle, body.projectSummary]))
     return body.model_dump()
 
 
@@ -182,7 +185,11 @@ def jobs(user=Depends(current_user)):
         data = [json.loads(row['data']) for row in rows]
         text = profile_text(user, c) if user['role'] == 'student' else ''
     if user['role'] == 'student' and data:
-        matches = {m['id']: m for m in ai_request('/match', dict(profileText=text, jobs=data))}
+        # The AI service accepts at most 500 jobs per request. Imported sources
+        # can exceed that limit; score every batch before globally sorting.
+        matches = {}
+        for start in range(0, len(data), 500):
+            matches.update({m['id']: m for m in ai_request('/match', dict(profileText=text, jobs=data[start:start + 500]))})
         data = [dict(job, **{k: v for k, v in matches[job['id']].items() if k != 'id'}) for job in data]
         data.sort(key=lambda job: job['matchScore'], reverse=True)
     return data
@@ -205,7 +212,18 @@ def post_job(body: JobInput, user=Depends(recruiter_only)):
                postedAt=now(), matchScore=0, astCleanCodeScore=0, isDemo=False)
     with db() as c:
         c.execute('INSERT INTO jobs VALUES (?,?,?)', (job['id'], user['id'], dump(job)))
+        index_job_skills(c, job['id'], job)
     return job
+
+
+@app.delete('/api/jobs/{job_id}', status_code=204)
+def remove_job(job_id: str, user=Depends(recruiter_only)):
+    with db() as c:
+        row, _ = job_data(job_id, c)
+        if row['owner_id'] != user['id']:
+            raise HTTPException(404, 'Không tìm thấy tin tuyển dụng.')
+        delete_job(c, job_id)
+    return Response(status_code=204)
 
 
 @app.get('/api/resumes/current')
@@ -233,6 +251,8 @@ def upload_resume(file: UploadFile, user=Depends(student_only)):
     identifier = uid()
     with db() as c:
         c.execute('INSERT INTO resumes VALUES (?,?,?,?,?,?)', (identifier, user['id'], name, content, text, now()))
+        index_resume_extraction(c, identifier, text)
+        index_candidate_skills(c, user['id'], text, 'resume')
     return {'id': identifier, 'name': name, 'size': len(content), 'textExtracted': bool(text.strip())}
 
 
@@ -259,7 +279,8 @@ def apply(body: ApplyInput, user=Depends(student_only)):
         if not resume:
             raise HTTPException(422, 'Tải CV PDF lên trước khi nộp đơn.')
         text = profile_text(user, c)
-    score = ai_request('/match', dict(profileText=text, jobs=[job]))[0]['matchScore']
+    prediction = ai_request('/match', dict(profileText=text, jobs=[job]))[0]
+    score = prediction['matchScore']
     identifier, timestamp = uid(), now()
     try:
         with db() as c:
@@ -267,6 +288,9 @@ def apply(body: ApplyInput, user=Depends(student_only)):
                       (identifier, body.jobId, user['id'], resume['id'], 'submitted', timestamp, timestamp, score, None))
             c.execute('INSERT INTO application_stage_events (application_id,stage,created_at) VALUES (?,?,?)',
                       (identifier, 'submitted', timestamp))
+            c.execute('INSERT INTO model_predictions VALUES (?,?,?,?,?,?,?,?)',
+                      (uid(), user['id'], body.jobId, resume['id'], prediction.get('modelVersion', prediction.get('method', 'baseline-v1')),
+                       score, prediction.get('explanation', ''), timestamp))
     except sqlite3.IntegrityError as error:
         raise HTTPException(409, 'Bạn đã ứng tuyển vị trí này.') from error
     return {'id': identifier, 'stage': 'submitted'}
@@ -358,10 +382,12 @@ def skill_gap(jobId: str | None = None, user=Depends(student_only)):
 
 
 @app.get('/api/analytics')
-def analytics(user=Depends(recruiter_only)):
+def analytics(category: str | None = None, user=Depends(recruiter_only)):
     from collections import Counter, defaultdict
     with db() as c:
         all_jobs = [json.loads(r['data']) for r in c.execute('SELECT data FROM jobs')]
+        if category and category != 'all':
+            all_jobs = [job for job in all_jobs if job.get('category') == category]
         profiles = [json.loads(r['profile']) for r in c.execute("SELECT profile FROM users WHERE role='student'")]
         applications = c.execute('''SELECT COUNT(*) AS total FROM applications a
             JOIN jobs j ON j.id=a.job_id WHERE j.owner_id=?''', (user['id'],)).fetchone()['total']
@@ -401,6 +427,29 @@ def analytics(user=Depends(recruiter_only)):
                 categoryDistribution=[dict(category=k, jobCount=v, percentage=round(v/len(all_jobs)*100)) for k, v in categories.items()],
                 salaryStats=salary_stats, hiringFunnel=funnel, totalApplications=applications,
                 scope='Dữ liệu trong ứng dụng; kỹ năng thống kê theo nhãn chính xác, không đại diện thị trường lao động.')
+
+
+@app.get('/api/analytics/export.csv')
+def analytics_export(category: str | None = None, user=Depends(recruiter_only)):
+    with db() as c:
+        jobs_data = [json.loads(row['data']) for row in c.execute('SELECT data FROM jobs')]
+    if category and category != 'all':
+        jobs_data = [job for job in jobs_data if job.get('category') == category]
+    demand = {}
+    for job in jobs_data:
+        for skill in set(job.get('tags', [])):
+            demand[skill] = demand.get(skill, 0) + 1
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['metric', 'category', 'value', 'sample_size'])
+    for skill, count in sorted(demand.items(), key=lambda item: (-item[1], item[0])):
+        writer.writerow(['skill_demand', skill, round(100 * count / len(jobs_data)) if jobs_data else 0, len(jobs_data)])
+    for job in jobs_data:
+        bounds = salary_range(job.get('salary'))
+        if bounds:
+            writer.writerow(['salary_observation', job.get('category', ''), f'{bounds[0]:.0f}-{bounds[1]:.0f}', 1])
+    return StreamingResponse(iter([output.getvalue()]), media_type='text/csv; charset=utf-8',
+                             headers={'Content-Disposition': 'attachment; filename="unitalent-analytics.csv"'})
 
 
 @app.get('/api/interview/questions')

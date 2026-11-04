@@ -1,8 +1,11 @@
 """Deterministic skill extraction and explainable matching, not a trained LLM."""
 import math
+import json
+import os
 import re
 import unicodedata
 from collections import Counter
+from pathlib import Path
 
 SKILLS = {
     'Java': ['java'], 'Spring Boot': ['spring boot', 'spring framework'],
@@ -33,6 +36,21 @@ SKILLS = {
 }
 
 
+def _load_model():
+    configured = os.getenv('MATCHING_MODEL_PATH')
+    path = Path(configured) if configured else Path(__file__).resolve().parents[1] / 'models' / 'matching-v2.json'
+    try:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+        if payload.get('version') and isinstance(payload.get('weights'), dict):
+            return payload
+    except (OSError, ValueError, TypeError):
+        pass
+    return {'version': 'baseline-v1', 'bias': 0, 'weights': {}}
+
+
+MATCHING_MODEL = _load_model()
+
+
 def normalize(text):
     return ''.join(c for c in unicodedata.normalize('NFKD', text.lower().replace('đ', 'd'))
                    if not unicodedata.combining(c))
@@ -53,8 +71,7 @@ def cosine(a, b):
     return sum(n * y[t] for t, n in x.items()) / denominator if denominator else 0.0
 
 
-def match(profile_text, job):
-    # Only explicit tags/requirements define required skills; prose is used for cosine.
+def matching_features(profile_text, job):
     required_text = ' '.join(job.get('tags', []) + job.get('requirements', []))
     required = set(extract_skills(required_text))
     owned = set(extract_skills(profile_text))
@@ -62,10 +79,32 @@ def match(profile_text, job):
     missing = sorted(required - owned)
     coverage = len(matched) / len(required) if required else 0
     similarity = cosine(profile_text, required_text + ' ' + job.get('description', ''))
-    score = round(100 * (0.85 * coverage + 0.15 * similarity)) if required else round(100 * similarity)
+    return required, matched, missing, coverage, similarity, min(len(required), 10) / 10
+
+
+def match(profile_text, job):
+    # Only explicit tags/requirements define required skills; prose is used for cosine.
+    required, matched, missing, coverage, similarity, required_ratio = matching_features(profile_text, job)
+    if not required:
+        score = round(100 * similarity)
+        method = 'baseline-v1'
+    elif not matched and not similarity:
+        score = 0
+        method = MATCHING_MODEL['version']
+    elif MATCHING_MODEL['weights']:
+        weights = MATCHING_MODEL['weights']
+        logit = MATCHING_MODEL['bias'] + weights.get('coverage', 0) * coverage
+        logit += weights.get('cosineSimilarity', 0) * similarity
+        logit += weights.get('requiredSkillRatio', 0) * required_ratio
+        probability = 1 / (1 + math.exp(-max(-30, min(30, logit))))
+        score = round(100 * probability)
+        method = MATCHING_MODEL['version']
+    else:
+        score = round(100 * (0.85 * coverage + 0.15 * similarity))
+        method = 'baseline-v1'
     return {'matchScore': score, 'matchedSkills': matched, 'missingSkills': missing,
             'coverage': round(coverage, 4), 'cosineSimilarity': round(similarity, 4),
-            'method': 'skill-coverage-85-cosine-15-v1',
+            'modelVersion': MATCHING_MODEL['version'], 'method': method,
             'explanation': f'Khớp {len(matched)}/{len(required)} kỹ năng nhận diện được. Điểm tham khảo, không phải xác minh năng lực.'}
 
 

@@ -39,7 +39,7 @@ Yêu cầu Node.js 22+, Python 3.12+, npm; Docker Desktop nếu chạy container
 npm run setup
 ```
 
-Setup tạo `.venv`, cài Python theo `requirements.lock.txt`, cài npm trong `apps/web` và tạo `.env` gốc nếu thiếu. Không ghi đè `.env` đang có. Repository không giữ `.env.example` hoặc `.env.local`; giá trị mặc định được quản lý trong `scripts/lib/env.mjs` và giải thích tại [configuration.md](docs/guides/configuration.md).
+Setup tạo `.venv`, cài Python theo `requirements.lock.txt`, cài npm trong `apps/web` và tạo `.env` gốc nếu thiếu. Không ghi đè `.env` đang có. Repository giữ `.env.example` không chứa secret để clone mới bắt đầu; key Gemini chỉ đặt trong `.env`. Giá trị mặc định cũng được quản lý trong `scripts/lib/env.mjs` và giải thích tại [configuration.md](docs/guides/configuration.md).
 
 Nếu chỉ muốn tạo cấu hình:
 
@@ -50,15 +50,17 @@ npm run env:init
 ## Chạy Docker
 
 ```powershell
-docker compose up --build -d --wait
-docker compose ps
+npm run docker:up
+npm run docker:ps
 ```
 
 Mở [localhost:3000](http://127.0.0.1:3000) với `WEB_PORT=3000`. Compose đọc cùng `.env` gốc; địa chỉ kết nối nội bộ `web → api → ai` được tạo từ tên service và cổng, không cần file env riêng trong container.
 
 ```powershell
-docker compose down
+npm run docker:down
 ```
+
+Người trong team clone repository chỉ cần cài Docker Desktop và Node.js, sau đó chạy `npm run docker:up`. Lệnh này tự tạo `.env` mặc định nếu thiếu, build đủ web/API/AI, chờ healthcheck rồi mở ứng dụng. Để kiểm thử đúng stack Docker bằng Playwright trong container, chạy `npm run docker:test`; báo cáo vẫn được ghi vào `artifacts/e2e/`. Dừng stack bằng `npm run docker:down`.
 
 Lệnh dừng giữ dữ liệu. Không xóa volume khi cần giữ tài khoản/CV. Bản `.env` trên máy hiện tại đang tham chiếu volume cũ ở chế độ external để bảo toàn dữ liệu sau đổi tên thư mục/service; clone mới dùng volume `unitalent_data`.
 
@@ -99,7 +101,7 @@ Tin/hồ sơ seed là minh họa. Nút đăng nhập nhanh dùng mật khẩu de
 - AI đối chiếu kỹ năng + cosine văn bản, giải thích kỹ năng thiếu, sinh lộ trình; luyện phỏng vấn văn bản và lưu lịch sử.
 - BI tổng hợp dữ liệu trong SQLite hiện tại, không khẳng định số liệu thị trường thực.
 
-AI là baseline NLP/rule-based, chưa có AST/đạo văn, xác minh commit GitHub, OCR, voice STT/TTS, LLM hoặc email tự động. Xem [trạng thái triển khai](docs/guides/implementation-status.md).
+AI dùng matching hybrid-v2 local cho ranking hàng loạt và Gemini `gemini-3.5-flash-lite` cho tác vụ sinh nội dung như đánh giá phỏng vấn/trích xuất kỹ năng; khi thiếu key hệ thống fallback offline. AST/đạo văn, xác minh commit GitHub, OCR, voice STT/TTS và email tự động chưa triển khai. Xem [trạng thái triển khai](docs/guides/implementation-status.md).
 
 ## Kiểm thử và build
 

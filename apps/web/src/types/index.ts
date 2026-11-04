@@ -25,6 +25,7 @@ export interface Job {
   requirements: string[];
   benefits: string[];
   missingSkills?: string[];
+  modelVersion?: string;
 }
 
 export interface Candidate {
@@ -130,6 +131,8 @@ export interface SalaryStatItem {
   sampleSize: number;
   averageMinimumVnd: number;
   averageMaximumVnd: number;
+  medianMinimumVnd?: number;
+  medianMaximumVnd?: number;
 }
 
 export interface HiringFunnelItem {

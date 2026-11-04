@@ -48,11 +48,13 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     return () => { accountGeneration.current += 1; };
   }, [user, refresh]);
   const uploadResume = async (file: File) => {
-    const generation = accountGeneration.current;
+    // Invalidate an in-flight refresh so it cannot overwrite the newly uploaded CV
+    // with the previous server snapshot after navigation.
+    accountGeneration.current += 1;
     const form = new FormData(); form.append('file', file);
     const result = await api<{ textExtracted: boolean }>('/resumes', { method: 'POST', body: form });
-    if (generation !== accountGeneration.current) return;
     setResume(file);
+    setLoaded(true);
     if (!result.textExtracted) setError('PDF không có lớp văn bản. Hãy bổ sung kỹ năng trong hồ sơ để ghép việc.');
   };
   const submitApplication = async (job: Job) => {

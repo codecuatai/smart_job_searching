@@ -1,10 +1,11 @@
 # Một file cấu hình: .env tại gốc
 
-Dự án chỉ có **một file `.env` thực ở gốc repository**. Không có `.env.example`, `.env.local` hoặc file env riêng cho web/API/AI.
+Dự án dùng `.env` thực ở gốc repository và có `.env.example` secret-free để clone mới bắt đầu.
 
 ```powershell
 npm run env:init
 # hoặc npm run setup
+# hoặc: Copy-Item .env.example .env
 ```
 
 Lệnh tạo `.env` nếu thiếu và không ghi đè cấu hình đang có. Giá trị mặc định được quản lý bằng mã nguồn trong `scripts/lib/env.mjs`; clone mới không cần lấy file bí mật từ Git.
@@ -22,6 +23,10 @@ Lệnh tạo `.env` nếu thiếu và không ghi đè cấu hình đang có. Gi�
 | COOKIE_SECURE | false | true khi dùng HTTPS |
 | DATA_VOLUME | unitalent_data | Tên volume SQLite/CV Docker |
 | DATA_VOLUME_EXTERNAL | false | true khi giữ lại một volume đã tồn tại, Compose không sở hữu/xóa volume này |
+| GEMINI_API_KEY | trống | API key Gemini từ Google AI Studio; chỉ đặt trong `.env`, không commit |
+| GEMINI_MODEL | gemini-3.5-flash-lite | Model Gemini dùng cho tác vụ sinh nội dung |
+| GEMINI_ENABLED | true | Bật Gemini; khi false hoặc thiếu key, AI dùng fallback local |
+| GEMINI_TIMEOUT_SECONDS | 25 | Timeout mỗi request Gemini |
 
 Biến tùy chọn, chỉ thêm vào cùng `.env` khi cần:
 
@@ -51,7 +56,7 @@ Không phải gõ lại các URL tương ứng: dev script, Next config, Python 
 - Node: `scripts/lib/env.mjs` tìm root theo vị trí file, dùng `process.loadEnvFile`; không phụ thuộc terminal đang đứng ở đâu.
 - Web: lệnh dev/build/start gọi `scripts/web.mjs`; `next.config.mjs` cũng đọc cấu hình chung khi Next CLI được gọi trực tiếp.
 - Python: `services/config.py` đọc root `.env` bằng python-dotenv; `python -m services.run api|ai` lấy cổng từ đó.
-- Docker Compose tự đọc root `.env`, truyền danh sách biến cần thiết cho từng container. File `.env` không được copy vào image.
+- Docker Compose tự đọc root `.env`, truyền Gemini key/model tới container AI. File `.env` không được copy vào image.
 - Playwright đọc cùng module Node để lấy E2E_BASE_URL hoặc WEB_PORT.
 
 Biến đã đặt trong môi trường tiến trình ưu tiên hơn `.env`, phù hợp CI/container. Các địa chỉ service nội bộ Docker do Compose sinh để tránh dùng localhost của container khác. Đây là giá trị runtime/build, không phải file cấu hình thứ hai.
@@ -63,6 +68,8 @@ Local: dừng và chạy lại `npm run dev`. Docker: `docker compose up --build
 Trên máy đang tái cấu trúc, DATA_VOLUME được giữ là `unitalent-e2e_backend_data` và DATA_VOLUME_EXTERNAL=true để tiếp tục dùng database cũ. Không đổi chỉ để làm đẹp tên nếu chưa sao lưu/migrate. `.env` của clone mới mặc định dùng tên `unitalent_data`.
 
 Mật khẩu seed không được cập nhật ngược vào tài khoản đã có. Nút demo trên giao diện dùng mật khẩu mặc định; nếu đổi DEMO_PASSWORD, đăng nhập bằng form với mật khẩu thực của tài khoản.
+
+Gemini được dùng cho đánh giá câu trả lời phỏng vấn và trích xuất kỹ năng qua endpoint AI. Matching hàng loạt vẫn dùng model hybrid-v2 local để không gửi hàng trăm request LLM cho một trang danh sách; nếu Gemini thiếu key hoặc lỗi, hai tác vụ sinh nội dung tự động fallback về rubric/taxonomy local.
 
 ## Git
 

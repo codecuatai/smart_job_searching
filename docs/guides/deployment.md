@@ -10,17 +10,25 @@ Build web: `npm run build`; chạy bằng `npm --prefix apps/web start` khi API/
 
 ## Docker Compose
 
+Cách chạy khuyến nghị cho thành viên trong team được ghi đầy đủ ở [getting-started.md](getting-started.md). Tóm tắt:
+
 ```powershell
 docker compose config --quiet
-docker compose up --build -d --wait
-docker compose ps
-docker compose logs --tail 100
-docker compose down
+npm run docker:up
+npm run docker:ps
+npm run docker:logs
+npm run docker:down
+```
+
+Kiểm thử production stack bằng Playwright trong Docker:
+
+```powershell
+npm run docker:test
 ```
 
 Service `web` công bố duy nhất WEB_PORT trên localhost. `api` và `ai` nằm trong mạng Docker. Cả ba có healthcheck. API dùng `http://ai:AI_PORT`; web build proxy tới `http://api:API_PORT`. Các giá trị được tạo từ root .env. Không copy .env vào image; web không nhận mật khẩu seed.
 
-Dữ liệu ở volume api_data, tên thực lấy từ DATA_VOLUME. DATA_VOLUME_EXTERNAL=true dành cho volume đã tồn tại; Compose không tạo/xóa volume external. Bản cấu hình trên máy này giữ volume cũ để bảo toàn dữ liệu. Fresh clone mặc định tạo volume unitalent_data. Không dùng down --volumes khi cần giữ dữ liệu.
+Dữ liệu ở volume `api_data`, tên thực lấy từ `DATA_VOLUME`. `DATA_VOLUME_EXTERNAL=true` dành cho volume đã tồn tại; Compose không tạo/xóa volume external. Bản cấu hình trên máy này giữ volume cũ để bảo toàn dữ liệu. Fresh clone mặc định tạo volume `unitalent_data`. Không dùng `down --volumes` khi cần giữ dữ liệu.
 
 Dockerfile chạy bằng user không phải root. `.dockerignore` bỏ media, env, var, artifacts, node_modules, cache và công cụ agent khỏi build context. Source ứng dụng dùng đường dẫn apps/web, services/api và services/ai.
 

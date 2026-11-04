@@ -1,0 +1,12 @@
+{
+  "version": "hybrid-v2",
+  "bias": -3.432044,
+  "weights": {
+    "coverage": 7.068545,
+    "cosineSimilarity": -0.036214,
+    "requiredSkillRatio": -0.371073
+  },
+  "trainedOn": "data/evaluation/matching_pairs.jsonl",
+  "samples": 10,
+  "description": "Ordinal logistic scorer trained by gradient descent on the versioned evaluation fixture."
+}

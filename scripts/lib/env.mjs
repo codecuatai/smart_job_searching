@@ -6,7 +6,7 @@ export const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export const WEB_DIR = resolve(ROOT, 'apps/web');
 export const ENV_PATH = resolve(ROOT, '.env');
 
-// Tracked defaults replace redundant .env.example files. Only .env stores local values.
+// Defaults are safe to commit; the actual Gemini key belongs only in .env.
 export const DEFAULT_ENV = `# UniTalent: the only environment file in this repository.
 # Generate missing configuration with npm run env:init or npm run setup.
 COMPOSE_PROJECT_NAME=unitalent
@@ -18,6 +18,10 @@ DEMO_PASSWORD=demo12345
 COOKIE_SECURE=false
 DATA_VOLUME=unitalent_data
 DATA_VOLUME_EXTERNAL=false
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.5-flash-lite
+GEMINI_ENABLED=true
+GEMINI_TIMEOUT_SECONDS=25
 # Optional: ALLOWED_ORIGINS, DATABASE_PATH, API_URL, AI_SERVICE_URL,
 # E2E_BASE_URL, PLAYWRIGHT_CHANNEL. See docs/guides/configuration.md.
 `;

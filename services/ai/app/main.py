@@ -1,6 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from .engine import QUESTIONS, evaluate, extract_skills, match
+from .engine import MATCHING_MODEL, QUESTIONS, evaluate, extract_skills, match
+from .gemini import evaluate_interview as gemini_evaluate_interview
+from .gemini import extract_skills as gemini_extract_skills
+from .gemini import status as gemini_status
 
 app = FastAPI(title='UniTalent AI', version='1.0.0')
 
@@ -21,7 +24,7 @@ class AnswerInput(BaseModel):
 
 @app.get('/health')
 def health():
-    return {'status': 'ok', 'engine': 'offline-nlp-baseline-v1'}
+    return {'status': 'ok', 'engine': MATCHING_MODEL.get('version', 'baseline-v1'), 'llm': gemini_status()}
 
 
 @app.post('/match')
@@ -31,7 +34,10 @@ def matching(body: MatchInput):
 
 @app.post('/skills')
 def skills(body: TextInput):
-    return {'skills': extract_skills(body.text)}
+    try:
+        return {'skills': gemini_extract_skills(body.text), 'method': 'gemini'}
+    except Exception:
+        return {'skills': extract_skills(body.text), 'method': 'taxonomy-v1'}
 
 
 @app.get('/interview/questions')
@@ -41,7 +47,10 @@ def questions():
 
 @app.post('/interview/evaluate')
 def evaluation(body: AnswerInput):
+    question = next((q for q in QUESTIONS if q['id'] == body.questionId), None)
+    if question is None:
+        raise HTTPException(404, 'Câu hỏi không tồn tại.')
     try:
+        return gemini_evaluate_interview(question['question'], body.answer, question['keywords'])
+    except Exception:
         return evaluate(body.questionId, body.answer)
-    except ValueError as error:
-        raise HTTPException(404, str(error)) from error

@@ -26,11 +26,11 @@ Phạm vi test hiện có:
 
 ## Kiểm thử thủ công
 
-Kiểm thử trình duyệt tự động được bổ sung tại [E2E.md](e2e.md), dùng Playwright với hai viewport và server Docker thật. Bộ này độc lập với `npm test` (pytest).
+Kiểm thử trình duyệt tự động được bổ sung tại [e2e.md](e2e.md), dùng Playwright với hai viewport và server Docker thật. Bộ này độc lập với `npm test` (pytest).
 
 Dùng luồng trong README gốc. Kiểm tra thêm tài khoản mới chưa có CV, tin không tồn tại, API/AI dừng và nút thử lại. Kiểm tra desktop/điện thoại: form không tràn ngang, sidebar thu gọn, lỗi hiển thị gần thao tác. Checklist học chưa lưu bền, không nhầm với trạng thái ứng tuyển trong DB.
 
-Docker Compose đã được build và chạy kiểm thử trên máy hiện tại; chi tiết ở [VERIFICATION.md](verification.md). CI YAML được cung cấp nhưng chỉ có kết quả CI thực sau khi bạn push lên GitHub; không xem file workflow là bằng chứng CI đã chạy.
+Docker Compose đã được build và chạy kiểm thử trên máy hiện tại; chi tiết ở [verification.md](verification.md). CI YAML được cung cấp nhưng chỉ có kết quả CI thực sau khi bạn push lên GitHub; không xem file workflow là bằng chứng CI đã chạy.
 
 ## Các lỗi thường gặp
 

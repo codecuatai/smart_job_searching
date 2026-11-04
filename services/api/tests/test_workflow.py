@@ -124,3 +124,49 @@ def test_health_reports_ai_outage(clients, monkeypatch):
         raise HTTPException(503, 'AI unavailable')
     monkeypatch.setattr(main, 'ai_request', unavailable)
     assert student.get('/api/health').json()['status'] == 'degraded'
+
+
+def test_delete_job_requires_owner_and_cleans_linked_test_application(clients):
+    student, recruiter, outsider = clients
+    register(student, 'delete-student@example.test')
+    register(recruiter, 'delete-owner@example.test', 'recruiter')
+    register(outsider, 'delete-outsider@example.test', 'recruiter')
+    job = new_job(recruiter)
+    other_job = new_job(outsider)
+    assert student.post('/api/resumes', files={'file': ('cv.pdf', pdf(), 'application/pdf')}).status_code == 201
+    application = student.post('/api/applications', json={'jobId': job['id']})
+    assert application.status_code == 201
+    assert student.delete(f'/api/jobs/{job["id"]}').status_code == 403
+    assert outsider.delete(f'/api/jobs/{job["id"]}').status_code == 404
+    assert recruiter.delete(f'/api/jobs/{job["id"]}').status_code == 204
+    assert student.get(f'/api/jobs/{job["id"]}').status_code == 404
+    assert student.get('/api/applications').json() == []
+    assert student.get('/api/resumes/current').json() is not None
+    assert student.get(f'/api/jobs/{other_job["id"]}').status_code == 200
+
+
+def test_job_list_scores_more_than_500_jobs_without_losing_or_misranking_them(clients, monkeypatch):
+    from services.api.app.db import db, dump
+
+    student, recruiter, _ = clients
+    register(student, 'batch-student@example.test')
+    owner = register(recruiter, 'batch-owner@example.test', 'recruiter')
+    with db() as connection:
+        for index in range(501):
+            job = dict(id=f'batch-{index}', title=f'Position {index}', matchScore=0)
+            connection.execute('INSERT INTO jobs VALUES (?,?,?)', (job['id'], owner['id'], dump(job)))
+    sizes = []
+
+    def score(path, body):
+        assert path == '/match'
+        sizes.append(len(body['jobs']))
+        assert len(body['jobs']) <= 500
+        return [dict(id=job['id'], matchScore=100 if job['id'] == 'batch-0' else 1) for job in body['jobs']]
+
+    monkeypatch.setattr(main, 'ai_request', score)
+    response = student.get('/api/jobs')
+    assert response.status_code == 200
+    rows = response.json()
+    assert sizes == [500, 1]
+    assert len(rows) == 501 and len({row['id'] for row in rows}) == 501
+    assert rows[0]['id'] == 'batch-0'

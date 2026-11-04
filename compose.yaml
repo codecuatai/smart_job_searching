@@ -5,6 +5,10 @@ services:
       dockerfile: services/ai/Dockerfile
     environment:
       AI_PORT: ${AI_PORT:-8001}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      GEMINI_ENABLED: ${GEMINI_ENABLED:-true}
+      GEMINI_TIMEOUT_SECONDS: ${GEMINI_TIMEOUT_SECONDS:-25}
     healthcheck:
       test: ["CMD", "python", "-c", "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.getenv('AI_PORT','8001') + '/health')"]
       interval: 10s
@@ -22,7 +26,9 @@ services:
       SEED_DEMO: ${SEED_DEMO:-true}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-demo12345}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      # The browser runs against the Compose service hostname during E2E.
+      # Keep localhost/127.0.0.1 for host-browser debugging as well.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://web:${WEB_PORT:-3000},http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000}}
     volumes:
       - api_data:/app/var/data
     depends_on:
@@ -51,7 +57,22 @@ services:
     depends_on:
       api:
         condition: service_healthy
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.64.1-noble
+    profiles: ["e2e"]
+    working_dir: /app/apps/web
+    environment:
+      E2E_BASE_URL: http://web:${WEB_PORT:-3000}
+      PLAYWRIGHT_CHANNEL: ""
+    volumes:
+      - .:/app
+      - e2e_node_modules:/app/apps/web/node_modules
+    depends_on:
+      web:
+        condition: service_healthy
+    command: ["bash", "-lc", "npm ci --no-audit --no-fund && npm run test:e2e"]
 volumes:
   api_data:
     name: ${DATA_VOLUME:-unitalent_data}
     external: ${DATA_VOLUME_EXTERNAL:-false}
+  e2e_node_modules:

@@ -4,14 +4,17 @@ Bộ kiểm thử dùng **Playwright Test**, trình duyệt Chromium/Edge thật
 
 ## Chạy lại
 
-Tại thư mục gốc:
+Tại thư mục gốc, cách khuyến nghị là chạy toàn bộ E2E trong Docker:
 
 ```powershell
-npm run setup
-docker compose up --build -d --wait
-npm run test:e2e
-npm run test:e2e:report
+npm run docker:test
 ```
+
+`docker:test` build và khởi động web/API/AI, chờ healthcheck, sau đó chạy Playwright trong service `e2e` trên cùng network Docker với `E2E_BASE_URL=http://web:3000`. Không cần Python virtualenv, npm dependencies hoặc trình duyệt cài trên máy host.
+
+Lệnh test tự sinh báo cáo HTML/JSON vào `artifacts/e2e/`. Nếu máy đã cài dependencies của `apps/web`, có thể mở report tương tác bằng `npm run test:e2e:report`.
+
+Nếu muốn chạy runner trên host để debug nhanh, dùng `npm run setup`, `docker compose up --build -d --wait`, rồi `npm run test:e2e`.
 
 Ứng dụng: [localhost:3000](http://127.0.0.1:3000). Báo cáo HTML sau khi chạy lệnh report: [localhost:9323](http://127.0.0.1:9323). Giữ terminal report mở khi xem; `Ctrl+C` chỉ dừng report server.
 

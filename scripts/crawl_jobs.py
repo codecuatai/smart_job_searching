@@ -263,16 +263,10 @@ def crawl_source(client: PublicClient, source: str, limit: int) -> list[dict[str
 
 
 def import_db(jobs: list[dict[str, Any]], owner_email: str) -> int:
-    from services.api.app.db import db, dump, init_db
+    from services.api.app.db import init_db
+    from services.api.app.job_maintenance import import_jobs
     init_db()
-    with db() as connection:
-        owner = connection.execute('SELECT id FROM users WHERE email=? AND role=?', (owner_email.lower(), 'recruiter')).fetchone()
-        if not owner:
-            raise CrawlError(f'Không tìm thấy recruiter {owner_email}; chạy API với SEED_DEMO=true hoặc truyền --owner-email.')
-        for job in jobs:
-            connection.execute('INSERT OR REPLACE INTO jobs (id,owner_id,data) VALUES (?,?,?)',
-                               (job['id'], owner['id'], dump(job)))
-    return len(jobs)
+    return import_jobs(jobs, owner_email)['importedJobs']
 
 
 def main() -> int:
@@ -304,7 +298,13 @@ def main() -> int:
         'jobs': list(unique.values()),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
+    # Do not destroy a previously successful export when a source is temporarily
+    # blocked (for example HTTP 403 from an anti-bot layer). A failed crawl must
+    # be retried explicitly instead of turning a usable import file into `jobs: []`.
+    if unique or not errors or not args.output.exists():
+        args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
+    else:
+        print(f'Giữ nguyên file crawl hiện có vì lần chạy này không lấy được dữ liệu: {args.output}', file=sys.stderr)
     if args.import_db and unique:
         print(f'Đã ghi {import_db(list(unique.values()), args.owner_email)} job vào SQLite.', file=sys.stderr)
     print(f'Đã xuất {len(unique)} job vào {args.output}')

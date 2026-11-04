@@ -95,6 +95,7 @@ test('complete recruitment workflow across two users with immutable CV and sched
   const company = `E2E Company ${token}`;
   const title = `E2E Python SQL ${token}`;
   const contexts: BrowserContext[] = [];
+  let createdJobId: string | undefined;
   try {
     await register(recruiter, 'recruiter', company);
     await recruiter.getByLabel(/^Tên vị trí/).fill(title);
@@ -105,6 +106,7 @@ test('complete recruitment workflow across two users with immutable CV and sched
     const posted = recruiter.waitForResponse(r => r.url().endsWith('/api/jobs') && r.request().method() === 'POST');
     await recruiter.getByRole('button', { name: 'Đăng tin tuyển dụng', exact: true }).click();
     const job = await (await posted).json();
+    createdJobId = job.id;
     expect(job.company).toBe(company);
     await expect(recruiter).toHaveURL(/\/recruiter\/candidates$/);
 
@@ -207,9 +209,19 @@ test('complete recruitment workflow across two users with immutable CV and sched
     await expect(salaryPanel.getByText(/\d+\.\d+–\d+\.\d+ triệu/).first()).toBeVisible();
     await expect(recruiter.getByRole('heading', { name: 'Chuyển đổi tuyển dụng', exact: true })).toBeVisible();
     await expect(recruiter.getByText(/100% so với giai đoạn trước/).first()).toBeVisible();
+    const analyticsExport = await recruiter.request.get('/api/analytics/export.csv');
+    expect(analyticsExport.status()).toBe(200);
+    expect(analyticsExport.headers()['content-type']).toContain('text/csv');
     await noHorizontalOverflow(recruiter);
   } finally {
-    for (const context of contexts) await context.close();
+    try {
+      if (createdJobId) {
+        const cleanup = await recruiter.request.delete(`/api/jobs/${createdJobId}`);
+        expect([204, 404]).toContain(cleanup.status());
+      }
+    } finally {
+      for (const context of contexts) await context.close();
+    }
   }
 });
 
