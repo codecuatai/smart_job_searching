@@ -55,7 +55,7 @@
   "candidateDeployed": false,
   "selectionBasis": "validation only; never select on held-out test",
   "datasetHash": "96704f5c6210c95c4381e69da63a7cf217598f8c0c951d09cd6f859c2d7f520c",
-  "latencyMsPerPair": 3.054,
+  "latencyMsPerPair": 6.613,
   "ablationTest": {
     "coverage": {
       "samples": 32,
@@ -110,28 +110,28 @@
       "pairId": "php-web-candidate-1__php-web-job-0",
       "expected": 1,
       "predicted": 0,
-      "score": 14
+      "score": 10
     },
     {
       "model": "baseline-v2",
       "pairId": "php-web-candidate-1__php-web-job-1",
       "expected": 1,
       "predicted": 0,
-      "score": 14
+      "score": 10
     },
     {
       "model": "candidate-v3",
       "pairId": "mobile-candidate-1__mobile-job-0",
       "expected": 1,
       "predicted": 0,
-      "score": 10
+      "score": 8
     },
     {
       "model": "candidate-v3",
       "pairId": "mobile-candidate-1__mobile-job-1",
       "expected": 1,
       "predicted": 0,
-      "score": 10
+      "score": 8
     },
     {
       "model": "candidate-v3",

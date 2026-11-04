@@ -75,3 +75,11 @@ def test_unrecognized_cv_does_not_get_a_high_profile_only_score():
     job = {'id': 'cv-empty', 'tags': ['Python'], 'requirements': [], 'description': ''}
     result = match('Python', job, 'Nội dung CV không có kỹ năng nhận diện')
     assert result['matchScore'] <= 45
+
+
+def test_low_information_crawled_listing_cannot_show_ninety_percent():
+    job = {'id': 'sparse-crawl', 'tags': ['Python', 'GitLab CI', 'Jenkins', 'Robot Framework'],
+           'requirements': ['Python', 'GitLab CI', 'Jenkins', 'Robot Framework'], 'description': ''}
+    result = match('', job, 'Python CI/CD')
+    assert result['matchScore'] < 80
+    assert result['coverage'] == 0.8

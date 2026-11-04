@@ -95,6 +95,21 @@ def cosine(a, b):
     return sum(n * y[t] for t, n in x.items()) / denominator if denominator else 0.0
 
 
+def requirement_quality(job, required):
+    """Estimate how much of the job's visible requirements we can interpret.
+
+    Crawled listings often contain generic/unmapped tags (for example
+    ``MLOps`` or ``Robot Framework``). A match on the two mapped tags must not
+    be presented as a 90% match when half of the listing is unknown to the
+    taxonomy.
+    """
+    raw_items = [str(item).strip() for key in ('tags', 'requirements', 'mustHaveSkills', 'niceToHaveSkills')
+                 for item in job.get(key, []) if str(item).strip()]
+    if not raw_items:
+        return 0.0
+    return min(1.0, len(required) / len(set(raw_items)))
+
+
 def matching_features(profile_text, job, resume_text=''):
     required_text = ' '.join(job.get('tags', []) + job.get('requirements', []) + job.get('mustHaveSkills', []) + job.get('niceToHaveSkills', []))
     required = set(extract_skills(required_text))
@@ -134,7 +149,7 @@ def feature_values(profile_text, job, idf=None, resume_text=''):
     experience = min(float(years[1])/needed, 1) if needed and years else 0
     return dict(coverage=coverage, cosineSimilarity=similarity, requiredSkillRatio=ratio,
                 mustHaveCoverage=len(must.intersection(matched))/len(must) if must else coverage,
-                experienceFit=experience)
+                experienceFit=experience, requirementQuality=requirement_quality(job, required))
 
 
 def match(profile_text, job, resume_text=''):
@@ -165,10 +180,20 @@ def match(profile_text, job, resume_text=''):
     else:
         score = round(100 * (0.85 * coverage + 0.15 * similarity))
         method = 'baseline-v1'
-    if len(required) == 1 and matched:
-        # One generic tag (most often SQL/English) is weak evidence. Keep the
-        # ranking useful but prevent a one-skill job from displaying 90%+.
-        score = min(score, 65)
+    if matched:
+        # Calibrate the learned probability into an explainable ranking score.
+        # Coverage is deliberately bounded by the CV-first 80/20 evidence
+        # policy, while low-information crawled listings receive an additional
+        # quality penalty. This prevents a one- or two-tag listing from showing
+        # 90% merely because the candidate has a broad CV.
+        quality = requirement_quality(job, required)
+        calibrated = round(100 * (0.2 + 0.8 * coverage) * (0.75 + 0.25 * quality))
+        score = min(score, calibrated)
+        caps = {1: 55, 2: 70, 3: 78, 4: 85}
+        score = min(score, caps.get(len(required), 92))
+        must_skills = set(extract_skills(' '.join(job.get('mustHaveSkills', []))))
+        if must_skills and not must_skills.issubset(set(matched)):
+            score = min(score, round(score * 0.75))
     if resume_text.strip() and not resume_skills and profile_skills:
         # A text-bearing CV with no recognized CV skill must not be rescued by
         # profile-only tags.  Keep it visible for review, but deliberately low.
@@ -181,7 +206,7 @@ def match(profile_text, job, resume_text=''):
             'trainingData': MATCHING_MODEL.get('dataProvenance','10 synthetic fixture pairs; not an independent quality estimate'),
             'scoreMeaning': 'Điểm xếp hạng tham khảo, không phải xác suất được tuyển.',
             'evidence': [dict(skill=s,quote=next((line.strip()[:300] for line in (resume_text + '\n' + profile_text).splitlines() if s in extract_skills(line)), '') ) for s in matched],
-            'explanation': f"Khớp {len(matched)}/{len(required)} kỹ năng nhận diện được; CV chiếm trọng số chính (80%), hồ sơ bổ sung 20%. Điểm tham khảo, không phải xác minh năng lực."}
+            'explanation': f"Khớp {len(matched)}/{len(required)} kỹ năng nhận diện được; độ bao phủ yêu cầu {requirement_quality(job, required):.0%}; CV chiếm trọng số chính (80%), hồ sơ bổ sung 20%. Điểm tham khảo, không phải xác minh năng lực."}
 
 
 QUESTIONS = [
