@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>Nam Nguyễn</title>
+  <rect width="128" height="128" rx="64" fill="#d9eee1"/>
+  <path d="M21 128c3-25 19-38 43-38s40 13 43 38" fill="#236b4d"/>
+  <circle cx="64" cy="56" r="28" fill="#f0bd91"/>
+  <path d="M37 55c0-24 11-37 29-37 20 0 29 13 27 39-8-8-12-20-13-29-11 12-24 18-43 18z" fill="#2d2a2a"/>
+  <path d="M54 69c6 5 14 5 20 0" fill="none" stroke="#9b5d4c" stroke-linecap="round" stroke-width="3"/>
+  <circle cx="54" cy="55" r="2.5" fill="#302f2f"/><circle cx="74" cy="55" r="2.5" fill="#302f2f"/>
+</svg>

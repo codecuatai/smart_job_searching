@@ -1,0 +1,4 @@
+{
+  "artifact": "matching-v2.json",
+  "basis": "validation macro-F1 and NDCG, no test selection"
+}

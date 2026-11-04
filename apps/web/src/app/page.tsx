@@ -7,6 +7,16 @@ import { ArrowDown, ArrowRight, ArrowUpRight, Check, ChevronDown, FileText, Menu
 import { MOCK_CANDIDATES_PIPELINE, MOCK_JOBS } from '@/data/mockData';
 
 type LandingRole = 'applicant' | 'recruiter';
+const landingAvatarByCandidate: Record<string, string> = {
+  'cand-001': '/avatars/nam-nguyen.svg',
+  'cand-002': '/avatars/thu-thao.svg',
+  'cand-003': '/avatars/hoang-nam.svg',
+};
+const landingCompanyAvatarByJob: Record<string, string> = {
+  'job-01': '/company-avatars/vng.svg',
+  'job-02': '/company-avatars/shopee.svg',
+  'job-03': '/company-avatars/viettel.svg',
+};
 
 function Brand() {
   return <Link className="landing-brand" href="/" aria-label="UniTalent AI, trang chủ">
@@ -21,7 +31,7 @@ function ApplicantPreview() {
     <div className="product-content">
       <div className="product-title-row"><div><span className="product-overline">Việc làm gợi ý</span><h2>Cơ hội dành cho bạn</h2></div><span className="product-date">TP. Hồ Chí Minh</span></div>
       {MOCK_JOBS.slice(0, 3).map((job, index) => <div className={`product-job ${index === 0 ? 'product-job-featured' : ''}`} data-reveal key={job.id}>
-        <span className="product-company-mark">{job.logoText.slice(0, 1)}</span>
+        <span className="product-company-mark"><Image src={landingCompanyAvatarByJob[job.id] || '/company-avatars/default.svg'} alt={`Logo ${job.company}`} width={34} height={34} /></span>
         <span className="product-job-info"><strong>{job.title}</strong><small>{job.company} <span>·</span> {job.workType}</small></span>
         <span className="product-match"><strong>{job.matchScore}%</strong><small>phù hợp</small></span>
       </div>)}
@@ -38,7 +48,7 @@ function RecruiterPreview() {
     <div className="product-content">
       <div className="product-title-row"><div><span className="product-overline">Hồ sơ ứng tuyển</span><h2>Ứng viên phù hợp</h2></div><span className="product-date">3 hồ sơ</span></div>
       {candidates.map((candidate, index) => <div className={`product-candidate ${index === 0 ? 'product-candidate-featured' : ''}`} data-reveal key={candidate.id}>
-        <span className={`product-avatar product-avatar-${index}`}>{candidate.avatarText}</span>
+        <span className={`product-avatar product-avatar-${index}`}><Image src={candidate.avatarUrl || landingAvatarByCandidate[candidate.id] || '/avatars/default-student.svg'} alt={`Ảnh đại diện của ${candidate.name}`} width={35} height={35} /></span>
         <span className="product-job-info"><strong>{candidate.name}</strong><small>{candidate.targetRole}</small></span>
         <span className="product-match"><strong>{candidate.matchScore}%</strong><small>phù hợp</small></span>
       </div>)}
@@ -60,7 +70,7 @@ function ApplicantEvidence() {
 
 function RecruiterEvidence() {
   return <div className="evidence-panel evidence-review-panel" data-ui="recruiter-cv-review-preview">
-    <div className="evidence-heading"><span className="evidence-avatar">N</span><span><strong>Nam Nguyễn</strong><small>Junior Java Backend · ĐH Bách Khoa</small></span><span className="evidence-status"><Check size={13} /> Hồ sơ mẫu</span></div>
+    <div className="evidence-heading"><span className="evidence-avatar"><Image src="/avatars/nam-nguyen.svg" alt="Ảnh đại diện của Nam Nguyễn" width={36} height={36} /></span><span><strong>Nam Nguyễn</strong><small>Junior Java Backend · ĐH Bách Khoa</small></span><span className="evidence-status"><Check size={13} /> Hồ sơ mẫu</span></div>
     <div className="evidence-score-row"><div><span>Độ phù hợp</span><strong>94%</strong></div><div><span>Dự án khai báo</span><strong>01</strong></div><div><span>Kỹ năng khai báo</span><strong>06</strong></div></div>
     <div className="evidence-project"><span>Dự án nổi bật</span><strong>E-Commerce Microservices & Realtime Analytics</strong><small>Java 21 · Spring Boot · Kafka · ClickHouse</small></div>
     <div className="evidence-footer"><span>CV đính kèm trong đơn ứng tuyển</span><ArrowUpRight size={15} /></div>

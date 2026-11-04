@@ -97,9 +97,42 @@ def init_db():
         );
         CREATE INDEX IF NOT EXISTS candidate_skills_skill ON candidate_skills(skill_name);
         CREATE INDEX IF NOT EXISTS job_skills_skill ON job_skills(skill_name);
+        CREATE TABLE IF NOT EXISTS learning_plans (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+            input_hash TEXT NOT NULL, data TEXT NOT NULL, progress TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL, UNIQUE(user_id,job_id,input_hash)
+        );
+        CREATE TABLE IF NOT EXISTS coaching_questions (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            topic TEXT NOT NULL, question TEXT NOT NULL, keywords TEXT NOT NULL,
+            method TEXT NOT NULL, created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS entity_metadata (
+            entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,
+            origin TEXT NOT NULL CHECK(origin IN ('real','demo','test')),
+            created_at TEXT NOT NULL, PRIMARY KEY(entity_type,entity_id)
+        );
+        CREATE TABLE IF NOT EXISTS resume_analysis (
+            resume_id TEXT PRIMARY KEY REFERENCES resumes(id) ON DELETE CASCADE,
+            data TEXT NOT NULL, confirmed INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS prediction_snapshots (
+            application_id TEXT PRIMARY KEY REFERENCES applications(id) ON DELETE CASCADE,
+            prediction TEXT NOT NULL, resume_analysis TEXT NOT NULL
+        );
         ''')
         c.execute('INSERT OR IGNORE INTO schema_version VALUES (2)')
+        c.execute('INSERT OR IGNORE INTO schema_version VALUES (3)')
+        c.execute('INSERT OR IGNORE INTO schema_version VALUES (4)')
         _backfill_skill_index(c)
+        backfill_metadata(c)
+        from .resume_analysis import local_analysis
+        for resume in c.execute('SELECT id,text FROM resumes WHERE id NOT IN (SELECT resume_id FROM resume_analysis)').fetchall():
+            from datetime import datetime, timezone
+            c.execute('INSERT INTO resume_analysis VALUES (?,?,?,?)',
+                      (resume['id'], dump(local_analysis(resume['text'])), 0, datetime.now(timezone.utc).isoformat()))
 
 
 def _backfill_skill_index(connection):
@@ -114,6 +147,7 @@ def _backfill_skill_index(connection):
         for alias in aliases:
             connection.execute('INSERT OR IGNORE INTO skill_aliases VALUES (?,?)', (alias.casefold(), skill))
     users = connection.execute("SELECT id, role, profile FROM users WHERE role='student'").fetchall()
+    connection.execute("DELETE FROM candidate_skills WHERE source='profile'")
     for user in users:
         try:
             profile = json.loads(user['profile'])
@@ -125,6 +159,7 @@ def _backfill_skill_index(connection):
             connection.execute('INSERT OR REPLACE INTO candidate_skills VALUES (?,?,?,?,?)',
                                (user['id'], skill, 'profile', 1, timestamp))
     jobs = connection.execute('SELECT id, data FROM jobs').fetchall()
+    connection.execute("DELETE FROM job_skills WHERE source='job-requirement'")
     for row in jobs:
         try:
             job = json.loads(row['data'])
@@ -140,6 +175,7 @@ def index_candidate_skills(connection, user_id, text, source='profile'):
     from datetime import datetime, timezone
     from services.ai.app.engine import extract_skills
     timestamp = datetime.now(timezone.utc).isoformat()
+    connection.execute('DELETE FROM candidate_skills WHERE user_id=? AND source=?', (user_id, source))
     for skill in extract_skills(text):
         connection.execute('INSERT OR REPLACE INTO candidate_skills VALUES (?,?,?,?,?)',
                            (user_id, skill, source, 1, timestamp))
@@ -149,6 +185,7 @@ def index_job_skills(connection, job_id, job, source='job-requirement'):
     from datetime import datetime, timezone
     from services.ai.app.engine import extract_skills
     timestamp = datetime.now(timezone.utc).isoformat()
+    connection.execute('DELETE FROM job_skills WHERE job_id=? AND source=?', (job_id, source))
     text = ' '.join(job.get('tags', []) + job.get('requirements', []))
     for skill in extract_skills(text):
         connection.execute('INSERT OR REPLACE INTO job_skills VALUES (?,?,?,?,?)',
@@ -165,3 +202,17 @@ def index_resume_extraction(connection, resume_id, text, extractor_version='pypd
 
 def dump(value):
     return json.dumps(value, ensure_ascii=False)
+
+
+def record_origin(connection, entity_type, identifier, origin):
+    from datetime import datetime, timezone
+    connection.execute('INSERT OR IGNORE INTO entity_metadata VALUES (?,?,?,?)',
+                       (entity_type, identifier, origin, datetime.now(timezone.utc).isoformat()))
+
+
+def backfill_metadata(connection):
+    from .data_quality import classify_origin
+    for row in connection.execute('SELECT id,email,profile FROM users').fetchall():
+        record_origin(connection, 'user', row['id'], classify_origin(json.loads(row['profile']), row['id'], row['email']))
+    for row in connection.execute('SELECT id,data FROM jobs').fetchall():
+        record_origin(connection, 'job', row['id'], classify_origin(json.loads(row['data']), row['id']))

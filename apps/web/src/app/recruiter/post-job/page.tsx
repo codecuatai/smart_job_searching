@@ -24,12 +24,14 @@ export default function RecruiterPostJobPage() {
   const [projectSubNote, setProjectSubNote] = useState('Chấp nhận đồ án CI/CD và Kubernetes thay cho 1,5 năm kinh nghiệm');
   const [requirements, setRequirements] = useState('Docker, Kubernetes, Linux, Terraform\nCI/CD với GitHub Actions\nTư duy giải quyết vấn đề và làm việc nhóm');
   const [description, setDescription] = useState('Cùng đội ngũ xây dựng nền tảng cloud ổn định, tự động hóa quy trình triển khai và cải thiện khả năng quan sát hệ thống.');
+  const [mustHave,setMustHave]=useState('');
+  const [niceToHave,setNiceToHave]=useState('');
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true); setError('');
     try {
-      await api('/jobs', { method: 'POST', body: JSON.stringify({ title, category, workType, salary, location, description, requirements: requirements.split('\n').filter(s => s.trim()), tags: requirements.split(/[,\n]/).map(s => s.trim()).filter(Boolean), astThreshold, projectSubstituteNote: projectSubNote }) });
+      await api('/jobs', { method: 'POST', body: JSON.stringify({ title, category, workType, salary, location, description, requirements: requirements.split('\n').filter(s => s.trim()), tags: requirements.split(/[,\n]/).map(s => s.trim()).filter(Boolean), mustHaveSkills:mustHave.split(',').map(s=>s.trim()).filter(Boolean),niceToHaveSkills:niceToHave.split(',').map(s=>s.trim()).filter(Boolean),minimumExperienceYears: experience.startsWith('2')?2:experience.startsWith('Trên')?4:0, astThreshold, projectSubstituteNote: projectSubNote }) });
       showToast('Đã đăng tin tuyển dụng', `Vị trí ${title} đã lưu trên máy chủ.`, 'success');
       router.push('/recruiter/candidates');
     } catch (err) { setError(err instanceof Error ? err.message : 'Không đăng được tin.'); }
@@ -54,6 +56,7 @@ export default function RecruiterPostJobPage() {
           </div>
         </section>
         <section className="job-form-section"><div className="job-section-heading"><span className="job-section-number">02</span><div><h2>Tiêu chí ứng viên</h2><p>Cho biết năng lực nào quan trọng nhất với vị trí này.</p></div></div>
+          <div className="job-form-grid"><label className="job-field"><span>Kỹ năng bắt buộc</span><input value={mustHave} onChange={e=>setMustHave(e.target.value)} placeholder="Python, SQL" maxLength={1000}/><small>Phân tách bằng dấu phẩy; để trống nếu chưa phân loại.</small></label><label className="job-field"><span>Kỹ năng ưu tiên</span><input value={niceToHave} onChange={e=>setNiceToHave(e.target.value)} placeholder="Docker, Kubernetes" maxLength={1000}/></label></div>
           <label className="job-field"><span>Kỹ năng và yêu cầu <b>*</b></span><textarea rows={5} value={requirements} onChange={event => setRequirements(event.target.value)} placeholder={'Mỗi yêu cầu một dòng\nVí dụ: Thành thạo SQL'} required /><small>Mỗi dòng sẽ được hiển thị như một tiêu chí riêng.</small></label>
           <div className="job-ast-section"><div className="job-ast-heading"><div className="job-ast-icon"><ShieldCheck size={17} /></div><div><h3>Đánh giá mã nguồn AST</h3><p>Thêm một tiêu chí minh bạch cho hồ sơ có dự án cá nhân.</p></div><span className="job-optional-tag">Tùy chọn</span></div>
             <div className="job-form-grid job-ast-grid">

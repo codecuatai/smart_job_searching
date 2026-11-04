@@ -20,7 +20,13 @@ services:
       dockerfile: services/api/Dockerfile
     environment:
       API_PORT: ${API_PORT:-8000}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      GEMINI_TIMEOUT_SECONDS: ${GEMINI_TIMEOUT_SECONDS:-25}
       WEB_PORT: ${WEB_PORT:-3000}
+      ANALYTICS_DATASET: ${ANALYTICS_DATASET:-real}
+      WAREHOUSE_HOST: warehouse
+      BI_READER_PASSWORD: ${BI_READER_PASSWORD:-Local-BI-Reader-4829}
+      BI_PUBLIC_URL: http://127.0.0.1:${BI_PORT:-3001}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:${AI_PORT:-8001}}
       DATABASE_PATH: /app/var/data/unitalent.db
       SEED_DEMO: ${SEED_DEMO:-true}
@@ -64,6 +70,9 @@ services:
     environment:
       E2E_BASE_URL: http://web:${WEB_PORT:-3000}
       PLAYWRIGHT_CHANNEL: ""
+      BI_TEST_URL: http://metabase:3000
+      BI_ADMIN_EMAIL: ${BI_ADMIN_EMAIL:-bi-admin@unitalent.local}
+      BI_ADMIN_PASSWORD: ${BI_ADMIN_PASSWORD:-Local-BI-Admin-4829!}
     volumes:
       - .:/app
       - e2e_node_modules:/app/apps/web/node_modules
@@ -71,8 +80,71 @@ services:
       web:
         condition: service_healthy
     command: ["bash", "-lc", "npm ci --no-audit --no-fund && npm run test:e2e"]
+  warehouse:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_PASSWORD: ${BI_POSTGRES_PASSWORD:-LocalWarehouse-4829}
+      METABASE_DB_PASSWORD: ${METABASE_DB_PASSWORD:-LocalMetadata-4829}
+      BI_READER_PASSWORD: ${BI_READER_PASSWORD:-Local-BI-Reader-4829}
+    volumes:
+      - warehouse_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/01-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  metabase:
+    image: metabase/metabase:v0.64.1
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_HOST: warehouse
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase_app
+      MB_DB_PASS: ${METABASE_DB_PASSWORD:-LocalMetadata-4829}
+      MB_LOAD_SAMPLE_CONTENT: "false"
+      MB_ANON_TRACKING_ENABLED: "false"
+      JAVA_TIMEZONE: Asia/Bangkok
+      JAVA_OPTS: -Xmx768m
+    ports:
+      - "127.0.0.1:${BI_PORT:-3001}:3000"
+    depends_on:
+      warehouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 8s
+      retries: 30
+  bi:
+    build:
+      context: .
+      dockerfile: services/bi/Dockerfile
+    environment:
+      DATABASE_PATH: /data/unitalent.db
+      WAREHOUSE_HOST: warehouse
+      BI_POSTGRES_PASSWORD: ${BI_POSTGRES_PASSWORD:-LocalWarehouse-4829}
+      BI_READER_PASSWORD: ${BI_READER_PASSWORD:-Local-BI-Reader-4829}
+      BI_ADMIN_EMAIL: ${BI_ADMIN_EMAIL:-bi-admin@unitalent.local}
+      BI_ADMIN_PASSWORD: ${BI_ADMIN_PASSWORD:-Local-BI-Admin-4829!}
+      BI_REFRESH_SECONDS: ${BI_REFRESH_SECONDS:-60}
+      METABASE_INTERNAL_URL: http://metabase:3000
+    volumes:
+      - api_data:/data:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      metabase:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,time; assert time.time()-os.path.getmtime('/tmp/bi-ready')<180"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
 volumes:
   api_data:
     name: ${DATA_VOLUME:-unitalent_data}
     external: ${DATA_VOLUME_EXTERNAL:-false}
   e2e_node_modules:
+  warehouse_data:

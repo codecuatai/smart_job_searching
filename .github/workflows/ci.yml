@@ -14,6 +14,7 @@ jobs:
       - run: node scripts/check-staged.mjs --all
       - run: python -m pip install -r requirements.lock.txt
       - run: python -m pytest -q
+      - run: python scripts/benchmark_matching.py
       - run: npm ci
         working-directory: apps/web
       - run: npm run lint
@@ -21,6 +22,8 @@ jobs:
       - run: npm run build
   e2e:
     runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,11 +31,10 @@ jobs:
           node-version: '22'
       - run: npm ci
         working-directory: apps/web
-      - run: npx playwright install --with-deps chromium
-        working-directory: apps/web
       - run: npm run env:init
-      - run: docker compose -p unitalent-e2e up --build -d --wait
-      - run: npm run test:e2e
+      - name: Require real Gemini for AI E2E
+        run: test -n "$GEMINI_API_KEY" || (echo 'Configure GEMINI_API_KEY repository secret for live AI E2E.' && exit 1)
+      - run: npm run docker:test
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -40,5 +42,5 @@ jobs:
           path: artifacts/e2e/
           include-hidden-files: true
           retention-days: 7
-      - run: docker compose -p unitalent-e2e down --volumes
+      - run: docker compose -p unitalent-test down
         if: always()

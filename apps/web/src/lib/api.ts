@@ -1,4 +1,4 @@
-export interface User { id: string; name: string; email: string; role: 'student' | 'recruiter' }
+export interface User { id: string; name: string; email: string; role: 'student' | 'recruiter'; avatarUrl?: string }
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;
   try {

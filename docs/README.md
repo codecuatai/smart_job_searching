@@ -5,11 +5,16 @@
 - [Cấu trúc dự án](guides/project-layout.md): đánh giá tên cũ, tên mới và nội dung đã dọn.
 - [Một file cấu hình](guides/configuration.md): root .env, cổng, local/Docker và dữ liệu.
 - [Kiến trúc](guides/architecture.md) · [API](guides/api.md).
+- [Yêu cầu, ERD và định nghĩa dữ liệu v4](guides/requirements-and-data.md).
+- [Docker, Metabase, ETL và backup/restore](guides/bi-and-recovery.md).
+- [Benchmark và hướng dẫn gold labels](../data/evaluation/README.md).
 - [Crawl job công khai](guides/job-crawler.md).
 - [Trạng thái triển khai](guides/implementation-status.md).
+- [Kế hoạch hoàn thiện 5 checklist TH3](plans/th3-completion-roadmap.md): backlog, phụ thuộc, tiêu chí nghiệm thu và mốc bàn giao AI/BI.
 - [Triển khai/sao lưu](guides/deployment.md) · [Git/media](guides/git-and-media.md).
 - [Kiểm thử](guides/testing.md) · [E2E](guides/e2e.md) · [Kết quả kiểm tra](guides/verification.md).
 - [Báo cáo model](reports/model-evaluation.md) · [Báo cáo BI](reports/bi-evaluation.md).
+- [Lộ trình học và phỏng vấn Gemini](reports/gemini-coaching.md): cách tạo, lưu tiến độ và kiểm chứng provider AI.
 
 Tài liệu thành phần: [web](../apps/web/README.md), [API](../services/api/README.md), [AI](../services/ai/README.md), [công cụ nghiên cứu](../scripts/research/README.md).
 

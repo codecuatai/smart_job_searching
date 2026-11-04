@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowRight, CalendarDays, Check, ChevronDown, Download, FileText,
   Filter, Search, SlidersHorizontal, Users, X,
@@ -39,14 +40,20 @@ function applicationTimestamp(date: string) {
 export default function RecruiterCandidatesPage() {
   const { showToast } = useToast();
   const { submissions, isLoaded, downloadSubmittedResume } = useResume();
-  const { data, error, loading, reload } = useResource<Candidate[]>('/candidates');
-  const allCandidates = useMemo(() => data || [], [data]);
-  const [query, setQuery] = useState('');
-  const [role, setRole] = useState<RoleFilter>('all');
-  const [stage, setStage] = useState<StageFilter>('all');
-  const [minMatch, setMinMatch] = useState('0');
+  const [query, updateQuery] = useState('');
+  const [role, updateRole] = useState<RoleFilter>('all');
+  const [stage, updateStage] = useState<StageFilter>('all');
+  const [minMatch, updateMinMatch] = useState('0');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'match' | 'recent'>('match');
+  const [page, setPage] = useState(1);
+  const setQuery=(value:string)=>{updateQuery(value);setPage(1);};
+  const setRole=(value:RoleFilter)=>{updateRole(value);setPage(1);};
+  const setStage=(value:StageFilter)=>{updateStage(value);setPage(1);};
+  const setMinMatch=(value:string)=>{updateMinMatch(value);setPage(1);};
+  const filters = new URLSearchParams({q: query,role,stage,minMatch,sort: sortBy,page: String(page),pageSize:'20'});
+  const { data, error, loading, reload } = useResource<{items: Candidate[];total:number}>(`/candidates/search?${filters}`);
+  const allCandidates = useMemo(() => data?.items || [], [data]);
 
   const candidates = useMemo(() => {
     const term = query.trim().toLocaleLowerCase('vi');
@@ -63,7 +70,7 @@ export default function RecruiterCandidatesPage() {
   const hasFilters = Boolean(query || role !== 'all' || stage !== 'all' || minMatch !== '0' || verifiedOnly);
   const clearFilters = () => { setQuery(''); setRole('all'); setStage('all'); setMinMatch('0'); setVerifiedOnly(false); };
 
-  if (loading || error) return <DataState error={error} retry={reload} />;
+  if (!data && (loading || error)) return <DataState error={error} retry={reload} />;
   return <div className="recruiter-candidates-page">
     <header className="recruiter-page-heading">
       <div>
@@ -75,7 +82,7 @@ export default function RecruiterCandidatesPage() {
     </header>
 
     <section className="recruiter-stats" aria-label="Tổng quan ứng viên">
-      <div><span>Tổng đơn ứng tuyển</span><strong>{allCandidates.length}</strong><small>ứng viên trong danh sách</small></div>
+      <div><span>Đơn ứng tuyển phù hợp</span><strong>{data?.total || 0}</strong><small>theo bộ lọc hiện tại</small></div>
       <div><span>Thẩm định mã nguồn</span><strong>—</strong><small>Chưa triển khai dịch vụ AST</small></div>
       <div><span>CV trên máy chủ</span><strong>{submissions.length}</strong><small>tệp có thể tải xuống</small></div>
       <div className="recruiter-stats-note"><span>Gợi ý hôm nay</span><p>Ưu tiên hồ sơ có dự án sát với vị trí đang tuyển.</p></div>
@@ -84,7 +91,7 @@ export default function RecruiterCandidatesPage() {
     {isLoaded && submissions.length > 0 && <section className="received-resumes recruiter-inbox" aria-labelledby="received-resumes-heading">
       <div className="received-resumes-heading"><div><h2 id="received-resumes-heading">CV mới nhận</h2><p>CV được đính kèm vào các đơn ứng tuyển tin của bạn</p></div><span>{submissions.length} CV</span></div>
       {submissions.map(application => <article className="received-resume-row" key={application.id}>
-        <div className="received-resume-avatar">{application.applicantName.slice(0, 1)}</div>
+        <div className="received-resume-avatar"><Image src={application.applicantAvatarUrl || '/avatars/default-student.svg'} alt={`Ảnh đại diện của ${application.applicantName}`} width={34} height={34} /></div>
         <div className="received-resume-main"><strong>{application.applicantName}</strong><span>{application.jobTitle} · {application.company}</span></div>
         <div className="received-resume-file"><FileText size={15} /><span>{application.resumeName}</span></div>
         <time dateTime={application.submittedAt}>{new Date(application.submittedAt).toLocaleDateString('vi-VN')}</time>
@@ -116,7 +123,7 @@ export default function RecruiterCandidatesPage() {
 
       <div className="candidate-result-list">
         {candidates.length ? candidates.map(candidate => <article className="candidate-result" key={candidate.id}>
-          <div className="candidate-result-avatar" data-candidate={candidate.id}>{candidate.avatarText}</div>
+          <div className="candidate-result-avatar" data-candidate={candidate.id}><Image src={candidate.avatarUrl || '/avatars/default-student.svg'} alt={`Ảnh đại diện của ${candidate.name}`} width={39} height={39} /></div>
           <div className="candidate-result-main">
             <div className="candidate-result-title"><Link href={`/recruiter/candidates/${candidate.id}`}>{candidate.name}</Link><span className={`candidate-stage stage-${candidate.status}`}>{stageLabels[candidate.status]}</span></div>
             <p className="candidate-result-role">{candidate.targetRole}</p><p className="candidate-result-school">{candidate.university} <span>·</span> GPA {candidate.gpa.toFixed(2)}</p>
@@ -128,5 +135,7 @@ export default function RecruiterCandidatesPage() {
         </article>) : <div className="candidate-empty"><div><Search size={21} /></div><h3>Chưa có hồ sơ phù hợp</h3><p>Thử đổi từ khóa hoặc nới lỏng một vài tiêu chí lọc.</p><button type="button" onClick={clearFilters}>Xóa tất cả bộ lọc</button></div>}
       </div>
     </section>
+    {error && <DataState error={error} retry={reload} />}
+    <nav className="flex justify-center items-center gap-4 py-4" aria-label="Phân trang ứng viên"><button disabled={page <= 1 || loading} onClick={() => setPage(p => p-1)}>Trang trước</button><span>{page} / {Math.max(1,Math.ceil((data?.total || 0)/20))}</span><button disabled={page*20 >= (data?.total || 0) || loading} onClick={() => setPage(p => p+1)}>Trang sau</button></nav>
   </div>;
 }

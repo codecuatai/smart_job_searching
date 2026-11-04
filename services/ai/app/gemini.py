@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
+import logging
 from typing import Any
 
 import httpx
@@ -52,15 +54,25 @@ def generate_text(prompt: str, *, json_mode: bool = False) -> str:
         raise RuntimeError('Gemini chưa được bật hoặc chưa có GEMINI_API_KEY.')
     body: dict[str, Any] = {
         'contents': [{'role': 'user', 'parts': [{'text': prompt}]}],
-        'generationConfig': {'temperature': 0.2, 'maxOutputTokens': 1200},
+        'generationConfig': {'temperature': 0.2, 'maxOutputTokens': 4096},
     }
     if json_mode:
         body['generationConfig']['responseMimeType'] = 'application/json'
     url = GEMINI_ENDPOINT.format(model=config['model'])
-    with httpx.Client(timeout=config['timeout']) as client:
-        response = client.post(url, params={'key': config['key']}, json=body)
-        response.raise_for_status()
-        return _text_from_response(response.json())
+    deadline=time.monotonic()+config['timeout']
+    for attempt in range(2):
+        try:
+            with httpx.Client(timeout=max(1,deadline-time.monotonic())) as client:
+                response = client.post(url, params={'key': config['key']}, json=body)
+                response.raise_for_status()
+                return _text_from_response(response.json())
+        except (httpx.HTTPError,RuntimeError) as error:
+            status=error.response.status_code if isinstance(error,httpx.HTTPStatusError) else None
+            # Never log exception strings/URLs: the upstream URL contains the key.
+            logging.getLogger(__name__).warning('Gemini failure type=%s status=%s attempt=%s',type(error).__name__,status,attempt+1)
+            if attempt or (status is not None and status not in (429,500,502,503,504)) or deadline-time.monotonic()<2:
+                raise
+            time.sleep(0.4)
 
 
 def generate_json(prompt: str) -> dict[str, Any]:

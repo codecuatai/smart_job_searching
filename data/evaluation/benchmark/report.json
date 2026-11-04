@@ -1,0 +1,179 @@
+{
+  "provenance": "synthetic-family-rule",
+  "goldLabelCount": 0,
+  "samples": 576,
+  "splits": {
+    "train": 512,
+    "validation": 32,
+    "test": 32
+  },
+  "leakageCheck": "no shared candidate/job IDs",
+  "validation": {
+    "baseline-v2": {
+      "samples": 32,
+      "accuracy": 0.875,
+      "macroF1": 0.5867,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    },
+    "candidate-v3": {
+      "samples": 32,
+      "accuracy": 0.8125,
+      "macroF1": 0.4867,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    }
+  },
+  "heldOutTest": {
+    "baseline-v2": {
+      "samples": 32,
+      "accuracy": 0.9375,
+      "macroF1": 0.8756,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    },
+    "candidate-v3": {
+      "samples": 32,
+      "accuracy": 0.75,
+      "macroF1": 0.3077,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    }
+  },
+  "candidateDeployed": false,
+  "selectionBasis": "validation only; never select on held-out test",
+  "datasetHash": "96704f5c6210c95c4381e69da63a7cf217598f8c0c951d09cd6f859c2d7f520c",
+  "latencyMsPerPair": 3.054,
+  "ablationTest": {
+    "coverage": {
+      "samples": 32,
+      "accuracy": 0.75,
+      "macroF1": 0.2857,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    },
+    "cosineSimilarity": {
+      "samples": 32,
+      "accuracy": 0.75,
+      "macroF1": 0.3077,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    },
+    "mustHaveCoverage": {
+      "samples": 32,
+      "accuracy": 0.75,
+      "macroF1": 0.2857,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    },
+    "experienceFit": {
+      "samples": 32,
+      "accuracy": 0.875,
+      "macroF1": 0.641,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    }
+  },
+  "limitations": [
+    "Synthetic family rules are not independent human relevance judgments.",
+    "Only four relevant candidate queries in each synthetic held-out split; ranking estimates are unstable.",
+    "Precision@5 divides by 5 even when the synthetic held-out pool contains only four jobs.",
+    "No claim of production hiring accuracy or probability."
+  ],
+  "errors": [
+    {
+      "model": "baseline-v2",
+      "pairId": "php-web-candidate-1__php-web-job-0",
+      "expected": 1,
+      "predicted": 0,
+      "score": 14
+    },
+    {
+      "model": "baseline-v2",
+      "pairId": "php-web-candidate-1__php-web-job-1",
+      "expected": 1,
+      "predicted": 0,
+      "score": 14
+    },
+    {
+      "model": "candidate-v3",
+      "pairId": "mobile-candidate-1__mobile-job-0",
+      "expected": 1,
+      "predicted": 0,
+      "score": 10
+    },
+    {
+      "model": "candidate-v3",
+      "pairId": "mobile-candidate-1__mobile-job-1",
+      "expected": 1,
+      "predicted": 0,
+      "score": 10
+    },
+    {
+      "model": "candidate-v3",
+      "pairId": "mobile-candidate-2__mobile-job-0",
+      "expected": 2,
+      "predicted": 1,
+      "score": 74
+    },
+    {
+      "model": "candidate-v3",
+      "pairId": "mobile-candidate-2__mobile-job-1",
+      "expected": 2,
+      "predicted": 1,
+      "score": 74
+    },
+    {
+      "model": "candidate-v3",
+      "pairId": "php-web-candidate-1__php-web-job-0",
+      "expected": 1,
+      "predicted": 0,
+      "score": 2
+    },
+    {
+      "model": "candidate-v3",
+      "pairId": "php-web-candidate-1__php-web-job-1",
+      "expected": 1,
+      "predicted": 0,
+      "score": 2
+    },
+    {
+      "model": "candidate-v3",
+      "pairId": "php-web-candidate-2__php-web-job-0",
+      "expected": 2,
+      "predicted": 1,
+      "score": 74
+    },
+    {
+      "model": "candidate-v3",
+      "pairId": "php-web-candidate-2__php-web-job-1",
+      "expected": 2,
+      "predicted": 1,
+      "score": 74
+    }
+  ]
+}

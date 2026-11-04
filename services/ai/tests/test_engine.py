@@ -31,3 +31,19 @@ def test_rubric_not_constant_for_different_answers():
     assert low['score'] < high['score']
     assert low['suggestedConcepts']
     assert high['score'] == 100
+
+
+def test_negation_preserves_affirmative_context_and_alias_boundaries():
+    assert extract_skills('Tôi chưa biết Java; đã xây API Python và SQL.') == ['Python','SQL']
+    assert extract_skills('I do not know Java or Docker. Built Python projects.') == ['Python']
+    assert 'Python' in extract_skills('Not only Python but also SQL')
+    assert match('I have no experience with Java.',dict(tags=['Java'],requirements=[],description=''))['matchScore'] == 0
+
+
+def test_must_have_and_experience_are_explicit_features():
+    result=match('Python 2 years experience',dict(tags=['Python','SQL'],requirements=[],description='',mustHaveSkills=['SQL'],niceToHaveSkills=['Python'],minimumExperienceYears=4))
+    assert result['missingMustHaveSkills'] == ['SQL']
+    factors={f['feature']:f for f in result['scoreFactors']}
+    assert factors['mustHaveCoverage']['value'] == 0
+    assert factors['experienceFit']['value'] == .5
+    assert factors['experienceFit']['weight'] == 0  # Baseline does not pretend to use a new feature.

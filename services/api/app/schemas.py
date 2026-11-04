@@ -60,8 +60,11 @@ class JobInput(BaseModel):
     benefits: list[str] = Field(default_factory=list, max_length=30)
     projectSubstituteNote: str = Field(default='', max_length=1000)
     astThreshold: int = Field(default=0, ge=0, le=100)
+    mustHaveSkills: list[str] = Field(default_factory=list, max_length=50)
+    niceToHaveSkills: list[str] = Field(default_factory=list, max_length=50)
+    minimumExperienceYears: float | None = Field(default=None, ge=0, le=50)
 
-    @field_validator('requirements', 'tags', 'benefits')
+    @field_validator('requirements', 'tags', 'benefits','mustHaveSkills','niceToHaveSkills')
     @classmethod
     def bounded_list(cls, values):
         if any(not v.strip() or len(v) > 1000 for v in values):
@@ -106,3 +109,24 @@ class StageInput(BaseModel):
 class Answer(BaseModel):
     questionId: str
     answer: str = Field(min_length=1, max_length=10000)
+
+
+class CoachingRequest(BaseModel):
+    jobId: str | None = None
+    hoursPerWeek: int = Field(default=6, ge=1, le=40)
+
+
+class ProgressRequest(BaseModel):
+    completedTasks: dict[str, bool] = Field(default_factory=dict, max_length=100)
+
+
+class AnalysisConfirmation(BaseModel):
+    skills: list[str] = Field(max_length=80)
+    experienceYears: float | None = Field(default=None, ge=0, le=60)
+
+    @field_validator('skills')
+    @classmethod
+    def valid_skills(cls, values):
+        if any(not value.strip() or len(value) > 100 for value in values):
+            raise ValueError('Kỹ năng cần có nội dung, tối đa 100 ký tự.')
+        return values

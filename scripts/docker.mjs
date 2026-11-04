@@ -16,7 +16,7 @@ function volumeExists(name) {
 }
 
 ensureRootEnv();
-const settings = config();
+config();
 const volumeName = process.env.DATA_VOLUME || 'unitalent_data';
 const dockerEnv = { ...process.env };
 if ((process.env.DATA_VOLUME_EXTERNAL || '').toLowerCase() === 'true' && !volumeExists(volumeName)) {
@@ -31,13 +31,25 @@ if (!['up', 'down', 'test', 'logs', 'ps'].includes(command)) {
   process.exit(2);
 }
 
-if (command === 'up') run(['compose', 'up', '--build', '-d', '--wait'], dockerEnv);
+if (command === 'up') run(['compose', 'up', '--build', '-d', '--wait', '--wait-timeout', '360'], dockerEnv);
 if (command === 'down') run(['compose', 'down'], dockerEnv);
 if (command === 'logs') run(['compose', 'logs', '-f'], dockerEnv);
 if (command === 'ps') run(['compose', 'ps'], dockerEnv);
 if (command === 'test') {
-  run(['compose', 'up', '--build', '-d', '--wait'], dockerEnv);
+  dockerEnv.COMPOSE_PROJECT_NAME = process.env.E2E_PROJECT_NAME || 'unitalent-test';
+  dockerEnv.DATA_VOLUME = dockerEnv.COMPOSE_PROJECT_NAME + '_api_data';
+  dockerEnv.DATA_VOLUME_EXTERNAL = 'false';
+  dockerEnv.WEB_PORT = process.env.E2E_WEB_PORT || '3100';
+  dockerEnv.API_PORT = '8100'; dockerEnv.AI_PORT = '8101';
+  dockerEnv.BI_PORT = process.env.E2E_BI_PORT || '3101';
+  dockerEnv.ANALYTICS_DATASET = 'test';
+  delete dockerEnv.API_URL; delete dockerEnv.AI_SERVICE_URL; delete dockerEnv.ALLOWED_ORIGINS;
+  // The test project is disposable by design. Reset only its own app,
+  // warehouse and Metabase volumes so failed E2E fixtures cannot pollute the
+  // next run; the production compose project/volume is untouched.
+  run(['compose', 'down', '--volumes', '--remove-orphans'], dockerEnv);
+  run(['compose', 'up', '--build', '-d', '--wait', '--wait-timeout', '360'], dockerEnv);
   run(['compose', '--profile', 'e2e', 'run', '--rm', 'e2e'], dockerEnv);
 }
 
-if (command === 'up') console.log(`UniTalent Docker đang chạy: http://127.0.0.1:${settings.webPort}`);
+if (command === 'up') console.log(`UniTalent Docker đang chạy: http://127.0.0.1:${dockerEnv.WEB_PORT || 3000} | Metabase: http://127.0.0.1:${dockerEnv.BI_PORT || 3001}`);

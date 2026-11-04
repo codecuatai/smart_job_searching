@@ -26,6 +26,10 @@ export interface Job {
   benefits: string[];
   missingSkills?: string[];
   modelVersion?: string;
+  scoreMeaning?: string;
+  scoreFactors?: { feature: string; value: number; weight: number; contribution: number }[];
+  missingMustHaveSkills?: string[];
+  evidence?: { skill: string; quote: string }[];
 }
 
 export interface Candidate {
@@ -37,6 +41,7 @@ export interface Candidate {
   gpa: number;
   email: string;
   avatarText: string;
+  avatarUrl?: string;
   targetRole: string;
   matchScore: number;
   status: ApplicationStage;
@@ -108,7 +113,12 @@ export interface SkillGapDiagnosis {
   targetJobTitle: string;
   company: string;
   currentScore: number;
-  projectedScore: number;
+  projectedScore?: number;
+  planId?: string | null;
+  method?: string;
+  summary?: string;
+  completedTasks?: Record<string, boolean>;
+  hoursPerWeek?: number;
   gaps: SkillGapItem[];
   roadmap: RoadmapStep[];
 }
@@ -118,6 +128,8 @@ export interface MarketStatItem {
   demandPercentage: number;
   supplyPercentage: number;
   shortagePercentage: number;
+  candidateCount?: number;
+  jobCount?: number;
 }
 
 export interface CategoryDistribution {

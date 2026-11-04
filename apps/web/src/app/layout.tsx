@@ -1,13 +1,12 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { ToastProvider } from '@/context/ToastContext';
 import { ResumeProvider } from '@/context/ResumeContext';
 import { AuthProvider } from '@/context/AuthContext';
 
-const plexSans = IBM_Plex_Sans({
-  subsets: ['latin', 'vietnamese'],
-  weight: ['400', '500', '600', '700'],
+const plexSans = localFont({
+  src: './fonts/GeistVF.woff',
   variable: '--font-plex-sans',
   display: 'swap',
 });

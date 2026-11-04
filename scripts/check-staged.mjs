@@ -12,7 +12,7 @@ const violations = names.filter(name => /(^|\/)(media|uploads|recordings|videos|
   || /(^|\/)(var|artifacts|node_modules|\.venv)\//i.test(name)
   || media.test(name)
   || (image.test(name) && !allowedImage.test(name))
-  || /(^|\/)\.env(?:\..*)?$/.test(name)
+  || (/(^|\/)\.env(?:\..*)?$/.test(name) && name !== '.env.example')
   || /\.(db|sqlite|sqlite3|pem|key)$/i.test(name)
   || /(^|\/)\.git\//.test(name));
 for (const name of names) {

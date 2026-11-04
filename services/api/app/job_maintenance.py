@@ -12,7 +12,8 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 from services.config import database_path
-from .db import db, dump, index_job_skills, init_db
+from .db import db, dump, index_job_skills, init_db, record_origin
+from .data_quality import canonical_url, normalized_job
 
 
 def backup_database(label):
@@ -69,8 +70,12 @@ def import_jobs(payload, owner_email='recruitment@vng.com.vn'):
             raise ValueError('Job phải có source/sourceUrl HTTPS thuộc TopCV hoặc ITviec.')
         if not job.get('title') or not job.get('company'):
             raise ValueError('Job thiếu title hoặc company.')
+        url = canonical_url(url)
+        job['sourceUrl'] = url
+        job['importedAt'] = datetime.now(timezone.utc).isoformat()
         # Never permit a supplied ID to overwrite an internal/recruiter job.
         job['id'] = f'external-{source}-' + hashlib.sha256(url.encode()).hexdigest()[:24]
+        job['normalized'] = normalized_job(job)
         job['isDemo'] = False
         unique[job['id']] = job
     if not unique:
@@ -89,6 +94,7 @@ def import_jobs(payload, owner_email='recruitment@vng.com.vn'):
                 ON CONFLICT(id) DO UPDATE SET data=excluded.data''', (job['id'], owner_id, dump(job)))
             connection.execute('DELETE FROM job_skills WHERE job_id=?', (job['id'],))
             index_job_skills(connection, job['id'], job)
+            record_origin(connection, 'job', job['id'], 'real')
     return dict(database=str(database_path()), importedJobs=len(unique),
                 sources=dict(Counter(job['source'] for job in unique.values())), backup=backup,
                 sourceErrors=payload.get('errors', {}) if isinstance(payload, dict) else {})

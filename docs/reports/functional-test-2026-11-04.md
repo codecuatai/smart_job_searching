@@ -1,5 +1,21 @@
 # Kiểm thử chức năng — 04/11/2026
 
+## Cập nhật mới nhất: coaching Gemini
+
+Đã triển khai lộ trình Gemini cá nhân hóa, lưu kế hoạch/checklist vào DB và tạo/chấm câu hỏi phỏng vấn theo hồ sơ/job. Không còn điểm tương lai 100% gán cứng. API timeout đã đồng bộ lên ít nhất 35 giây. **24/24 backend/AI và 22/22 Docker E2E** qua trong 141,9 giây; hai viewport yêu cầu Gemini thật và kiểm tra progress qua reload. Chi tiết: [gemini-coaching.md](gemini-coaching.md).
+
+Các phần phía dưới giữ kết quả những vòng kiểm tra trước; các ghi chú “lộ trình mẫu” và timeout 15 giây thuộc trạng thái cũ.
+
+## Cập nhật sau sửa upload PDF và mở rộng E2E
+
+Vòng mới nhất: 19/19 backend, lint/typecheck qua; Docker E2E **22/22 passed** trong 79,7 giây, không retry/skipped/flaky. Kết quả bên dưới phần này ghi nhận vòng kiểm tra trước khi sửa, để giữ lịch sử lỗi.
+
+Đã mở rộng thành 11 kịch bản × desktop/mobile. Ngoài luồng đăng nhập/ứng tuyển/lịch/BI, kiểm tra thêm PDF rỗng, mật khẩu mở, hạn chế quyền không cần mật khẩu, quá 30 trang, quá 5 MB, PDF không có lớp chữ và PDF có BOM. Kiểm tra thông báo lỗi cố định, giữ nguyên CV cũ khi lỗi, đọc lại sau reload và đối chiếu SHA-256 file tải về. Bổ sung validation tài khoản/hồ sơ và tìm kiếm/xóa bộ lọc job/ứng viên.
+
+Ca phỏng vấn chờ response API thay vì đòi UI có kết quả trong 10 giây. Cả hai lần desktop/mobile trả HTTP 200, lưu đúng lịch sử và dùng `gemini:gemini-3.5-flash-lite`. Giới hạn API timeout 15 giây/Gemini 25 giây chưa thay đổi; lần chạy thành công không chứng minh mọi điều kiện mạng đều ổn.
+
+Web/API/AI healthy, integrity_check=ok, 639 job (635 ITviec + 4 demo), 0 job E2E sau cleanup. Tài khoản/CV synthetic vẫn được giữ trong DB test. Các giới hạn chưa OCR, upload chưa gọi Gemini skills và nhận diện phủ định chưa sửa vẫn còn nguyên; không coi E2E xanh là bằng chứng chất lượng mô hình.
+
 ## Phạm vi và kết quả
 
 Chạy `npm test`: 15 passed, 1 cảnh báo deprecation Starlette/httpx.

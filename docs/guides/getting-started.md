@@ -14,10 +14,18 @@ Hướng dẫn này dành cho thành viên clone repository mới. UniTalent đ�
 ```powershell
 git clone <URL_REPOSITORY>
 cd day8HeThongTimViecLamThongMinh
+npm run env:init
 npm run docker:up
 ```
 
-Script tự tạo `.env` mặc định nếu chưa có, build ba image `web`, `api`, `ai`, tạo volume dữ liệu và chờ healthcheck. Mở ứng dụng tại [http://127.0.0.1:3000](http://127.0.0.1:3000).
+Sau `npm run env:init`, mở `.env` ở thư mục gốc và điền:
+
+```dotenv
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.5-flash-lite
+```
+
+Không commit `.env`. Script `docker:up` sẽ build web/API/AI, PostgreSQL warehouse, Metabase và worker BI, tạo volume dữ liệu và chờ healthcheck. Mở ứng dụng tại [http://127.0.0.1:3000](http://127.0.0.1:3000), Metabase tại [http://127.0.0.1:3001](http://127.0.0.1:3001). Nếu chưa điền key, hệ thống vẫn khởi động nhưng các tính năng Gemini (phân tích CV, lộ trình học tập, phỏng vấn) sẽ không hoạt động.
 
 Kiểm tra trạng thái:
 
@@ -25,7 +33,7 @@ Kiểm tra trạng thái:
 npm run docker:ps
 ```
 
-Ba service phải hiển thị `healthy`. Xem log khi cần:
+Các service phải hiển thị `healthy`. Xem log khi cần:
 
 ```powershell
 npm run docker:logs
@@ -36,11 +44,13 @@ npm run docker:logs
 Khi `SEED_DEMO=true` (mặc định), hệ thống tạo dữ liệu minh họa nếu database còn trống. Có thể đăng nhập bằng:
 
 ```text
-Email: nam.nguyen@hcmut.edu.vn
-Mật khẩu: demo12345
+Sinh viên: nam.nguyen@hcmut.edu.vn
+Nhà tuyển dụng: recruitment@vng.com.vn
+Nhà tuyển dụng: talent@fptsoftware.com
+Mật khẩu chung: demo12345
 ```
 
-Mật khẩu chỉ được áp dụng lúc tài khoản seed được tạo lần đầu; đổi `DEMO_PASSWORD` không ghi đè mật khẩu đã tồn tại.
+Seed có sẵn 3 ứng viên, avatar nội bộ, CV PDF minh họa, đơn ứng tuyển theo trạng thái và tin tuyển dụng mẫu. Mật khẩu chỉ được áp dụng lúc tài khoản seed được tạo lần đầu; đổi `DEMO_PASSWORD` không ghi đè mật khẩu đã tồn tại.
 
 ## Kiểm thử toàn bộ stack Docker
 
@@ -48,7 +58,7 @@ Mật khẩu chỉ được áp dụng lúc tài khoản seed được tạo l�
 npm run docker:test
 ```
 
-Lệnh này build/khởi động ứng dụng, chờ healthcheck rồi chạy Playwright trong service `e2e` trên network Docker (`E2E_BASE_URL=http://web:3000`). Bộ hiện tại gồm 8 ca trên desktop và mobile. Kết quả được ghi tại:
+Lệnh này build/khởi động ứng dụng, chờ healthcheck rồi chạy Playwright trong service `e2e` trên network Docker (`E2E_BASE_URL=http://web:3000`). Bộ hiện tại gồm 28 ca trên desktop và mobile. Kết quả được ghi tại:
 
 - `artifacts/e2e/results.json` — kết quả máy đọc được.
 - `artifacts/e2e/report/` — báo cáo HTML.

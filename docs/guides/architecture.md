@@ -1,6 +1,6 @@
 # Kiến trúc ứng dụng
 
-## Ba dịch vụ trong một repository
+## Ứng dụng và data mart trong một repository
 
 Source hiện tại: `apps/web`, `services/api`, `services/ai`. Cùng đọc duy nhất `.env` ở root, dữ liệu local tại `var/data`, báo cáo kiểm thử tại `artifacts`. Cổng trong sơ đồ bên dưới là giá trị mặc định và có thể đổi trong `.env`. Xem [configuration.md](configuration.md) và [project-layout.md](project-layout.md).
 
@@ -9,15 +9,21 @@ flowchart LR
     U[Trình duyệt] -->|Cùng origin, session cookie| FE[Next.js :3000]
     FE -->|Rewrite /api/*| BE[FastAPI Backend :8000]
     BE --> DB[(SQLite + CV BLOB)]
-    BE -->|HTTP nội bộ, timeout 15s| AI[FastAPI AI :8001]
+    BE -->|HTTP nội bộ, timeout có giới hạn| AI[FastAPI AI :8001]
     AI --> NLP[Chuẩn hóa alias + Coverage + Cosine]
+    AI --> GEM[Gemini: extraction và coaching]
+    DB --> ETL[BI worker: SQLite consistent snapshot]
+    ETL --> PG[(PostgreSQL data mart)]
+    PG --> MB[Metabase :3001]
 ```
 
-Frontend gọi đường dẫn tương đối `/api/*`; proxy giữ cùng origin nên không cần token ở localStorage hoặc CORS rộng. Backend thực thi quyền và lưu dữ liệu; AI chỉ tính toán từ payload, không có kết nối tới DB hoặc Internet. Khi AI dừng, các thao tác cần AI trả 503; API health báo `degraded`, giao diện có thông báo và thử lại. Đăng nhập/đọc đơn không phụ thuộc AI.
+Frontend gọi `/api/*` cùng origin; backend kiểm tra quyền và lưu SQLite. AI không truy cập DB; matching local không gửi kho CV ra ngoài, còn phân tích CV và coaching gọi Gemini từ payload người dùng chủ động gửi. Lỗi AI trả 503, không tạo kết quả Gemini giả. Matching cache theo hash toàn bộ input 60 giây, tối đa 16 batches; CV/profile/job thay đổi tạo key mới. Đăng nhập/đọc đơn không phụ thuộc AI.
 
-Trong Docker, chỉ frontend mở cổng ra host; backend và AI giao tiếp bằng tên service. Khi dev, API và AI bind `127.0.0.1`.
+Docker mở web :3000 và Metabase :3001 trên loopback; API/AI/PostgreSQL chỉ trong network. Test dùng project/volume riêng, cổng :3100/:3101.
 
-## Mô hình dữ liệu SQLite version 1
+## Mô hình nghiệp vụ cơ sở và migration version 4
+
+ERD mở rộng, dictionary, origin và metric: [requirements-and-data.md](requirements-and-data.md). Sơ đồ dưới là quan hệ nghiệp vụ cốt lõi; v4 bổ sung extraction có xác nhận, prediction snapshots và entity metadata bên cạnh skills/coaching/stage events.
 
 ```mermaid
 erDiagram
@@ -83,16 +89,16 @@ erDiagram
 
 ## BI và AI
 
-BI hiện đọc trực tiếp SQLite, tính tỷ lệ tin có nhãn kỹ năng và sinh viên khai báo đúng nhãn đó. Nguồn dữ liệu nhỏ, bao gồm seed; không đại diện cho thị trường lao động thực. Không ETL hoặc Star Schema vật lý trong MVP. Sơ đồ Star Schema DOCX là thiết kế nghiên cứu.
+Web BI đọc SQLite bằng owner scope; ETL đồng bộ snapshot đã chuẩn hóa sang PostgreSQL. Metabase bootstrap 6 câu hỏi/dashboard, dùng role chỉ đọc view tổng hợp. Real/demo/test tách biệt; currency/period tách riêng, thời gian lấy ngày đăng gốc. Chi tiết grain, quyền, refresh và recovery: [bi-and-recovery.md](bi-and-recovery.md).
 
-AI sử dụng từ điển kỹ năng và cosine bag-of-words; công thức ở [AI README](../../services/ai/README.md). Lộ trình được tạo từ các kỹ năng chưa nhận diện. Thông tin GitHub chỉ là liên kết do người dùng khai báo; ứng dụng không clone repo hoặc thực thi mã nguồn do người dùng gửi.
+Matching hybrid-v2 dùng kỹ năng/cosine và logistic weights; artifact thử nghiệm TF-IDF v3 được chọn bằng validation, hiện không đạt nên chưa triển khai. [Benchmark](../../data/evaluation/README.md) tách 576 mẫu synthetic thành train/validation/test; chưa có human gold. Gemini trích CV có câu bằng chứng, người dùng chỉnh/xác nhận; OCR Poppler/Tesseract tối đa 3 trang khi không có text. Lộ trình/câu hỏi/chấm phỏng vấn dùng Gemini. GitHub là liên kết khai báo, không thực thi mã người dùng.
 
 ## Quyết định kỹ thuật
 
 - SQLite giúp chạy nhanh trên Windows mà không cài PostgreSQL; CV BLOB thuận tiện snapshot, sao lưu và quyền tải xuống.
 - Session opaque giúp logout thu hồi ngay; không đưa bearer token vào JS storage.
 - Ba package độc lập nhưng dùng chung Python virtual environment ở local để giảm cài đặt.
-- Không dùng model bên ngoài để tránh khóa API và chi phí cho bài tập; API cho phép thay engine về sau.
+- Gemini cần key riêng trong `.env`; model mặc định `gemini-3.5-flash-lite`. Matching local hỗ trợ xếp hạng nhiều job mà không gọi LLM từng tin.
 - Không di chuyển `docs/`, `scripts/research/`, `media/` đang có để bảo toàn đường dẫn báo cáo/video và script nghiên cứu.
 
 ## Phần cần bổ sung trước khi mở rộng

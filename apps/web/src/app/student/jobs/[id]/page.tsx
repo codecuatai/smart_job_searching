@@ -150,6 +150,17 @@ export default function JobDetailPage() {
 
         {/* Right Column (1 Col): AI Diagnosis & Actions */}
         <div className="space-y-6">
+          <section className="bg-white p-5 rounded-2xl border border-slate-200 space-y-3" aria-label="Giải thích matching">
+            <h2 className="font-bold">Cách tính độ phù hợp</h2>
+            <p className="text-sm text-slate-600">{job.scoreMeaning} Model: {job.modelVersion}.</p>
+            <p className="text-sm">Kỹ năng khớp: {job.matchedSkills?.join(', ') || 'Chưa nhận diện được'}</p>
+            {!!job.missingMustHaveSkills?.length && <p className="text-sm">Thiếu bắt buộc: {job.missingMustHaveSkills.join(', ')}</p>}
+            <details><summary className="cursor-pointer text-sm font-semibold">Xem hệ số và bằng chứng</summary>
+              <p className="text-xs text-slate-500 my-2">Hệ số đóng góp vào logit trước sigmoid. Hệ số 0 nghĩa là model hiện tại chưa sử dụng yếu tố đó. Kinh nghiệm thiếu thông tin được để unknown.</p>
+              {job.scoreFactors?.map(f => <p className="text-xs py-1" key={f.feature}>{({coverage:'Độ phủ kỹ năng',cosineSimilarity:'Tương đồng văn bản',requiredSkillRatio:'Số kỹ năng yêu cầu',mustHaveCoverage:'Kỹ năng bắt buộc',experienceFit:'Kinh nghiệm'} as Record<string,string>)[f.feature] || f.feature}: {Math.round(f.value*100)}% · hệ số {f.weight.toFixed(3)}</p>)}
+              {job.evidence?.map(e => <blockquote className="text-sm border-l-2 pl-2 my-2 break-words" key={e.skill}><strong>{e.skill}</strong>: {e.quote}</blockquote>)}
+            </details>
+          </section>
           {/* AST Audit Quality Target */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 space-y-3.5">
             <div className="flex items-center space-x-2 text-xs font-semibold text-slate-700">
@@ -203,10 +214,10 @@ export default function JobDetailPage() {
           <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 space-y-3">
             <div className="flex items-center space-x-2 text-xs font-bold text-blue-400">
               <Mic className="w-4 h-4" />
-              <span>Luyện phỏng vấn Voice AI</span>
+              <span>Luyện phỏng vấn bằng AI</span>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Mô phỏng 1 buổi phỏng vấn 10 phút với Tech Lead của {job.company} để tự tin vượt qua vòng chuyên môn.
+              Trả lời câu hỏi bằng văn bản và nhận phản hồi Gemini theo vị trí mục tiêu.
             </p>
             <Link
               href="/student/mock-interview"

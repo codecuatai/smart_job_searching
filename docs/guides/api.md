@@ -8,7 +8,7 @@ Backend local: `http://127.0.0.1:8000`. Qua Next: `http://localhost:3000/api/...
 | --- | --- | --- | --- |
 | POST | `/api/auth/register` | Công khai | `name`, `email`, `password` (8–128), `role` (`student` / `recruiter`), trả 201 + cookie |
 | POST | `/api/auth/login` | Công khai | `email`, `password`, trả user + cookie |
-| GET | `/api/auth/me` | Đã đăng nhập | `{id,name,email,role}` |
+| GET | `/api/auth/me` | Đã đăng nhập | `{id,name,email,role,avatarUrl}`; avatar là asset SVG nội bộ |
 | POST | `/api/auth/logout` | Có/không phiên | Thu hồi cookie hiện tại, trả 204 |
 | GET | `/api/health` | Công khai | `{status,database,ai}`, status có thể `degraded` |
 
@@ -68,7 +68,7 @@ POST tin tuyển dụng:
 
 | Method | Path | Quyền | Nội dung |
 | --- | --- | --- | --- |
-| POST | `/api/resumes` | student | multipart trường `file`; PDF ≤5 MB / 30 trang, trả `{id,name,size,textExtracted}` |
+| POST | `/api/resumes` | student | multipart trường `file`; PDF ≤5 MB / 30 trang, trả `{id,name,size,textExtracted,warning}` |
 | GET | `/api/resumes/current` | student | Metadata CV gần nhất hoặc JSON `null` |
 | GET | `/api/resumes/{id}/download` | Chủ CV | PDF attachment |
 | POST | `/api/applications` | student | `{ "jobId": "..." }`; lấy CV gần nhất, trả 201 `{id,stage}` |
@@ -77,6 +77,8 @@ POST tin tuyển dụng:
 | PATCH | `/api/applications/{id}` | Recruiter chủ tin | Stage và lịch hẹn |
 | GET | `/api/candidates` | recruiter | Hồ sơ ứng viên theo từng đơn thuộc tin của mình |
 | GET | `/api/candidates/{id}` | recruiter chủ tin | `id` là **application ID**, không phải user ID |
+
+PDF đọc được nhưng lỗi font/trích xuất chữ vẫn được lưu, kèm `warning`; bản scan được lưu với `textExtracted=false` và khi bấm phân tích AI sẽ OCR tối đa 3 trang đầu bằng Poppler/Tesseract. PDF hạn chế quyền nhưng không yêu cầu mật khẩu mở được chấp nhận. File khóa mật khẩu, rỗng, hỏng cấu trúc hoặc quá 30 trang trả 422 với thông báo cụ thể; quá 5 MB trả 413. Upload thất bại giữ nguyên CV trước đó và giao diện hiển thị lỗi tại ô CV.
 
 Các trạng thái hợp lệ: submitted → reviewing → interview → offered. MVP cho phép recruiter sửa về bất kỳ trạng thái hợp lệ nào để chỉnh sai sót. Sinh viên không có quyền sửa stage.
 
@@ -100,6 +102,16 @@ Ngày/giờ theo giờ Việt Nam. Gửi stage khác có thể bỏ schedule; l�
 | GET | `/api/interview/questions` | student | Danh sách `{id,question}` |
 | POST | `/api/interview/evaluate` | student | `{questionId,answer}` (1–10.000 ký tự); lưu lịch sử |
 | GET | `/api/interview/history` | student | Tối đa 50 lượt mới nhất của mình |
+
+### Lộ trình và phỏng vấn Gemini
+
+- `GET /api/skill-gap?jobId=...&hoursPerWeek=6`: skills thiếu và kế hoạch đã lưu nếu có; chưa tạo trả `method=not-generated`, `roadmap=[]`.
+- `POST /api/skill-gap`: `{jobId, hoursPerWeek}` (1–40 giờ), tạo bằng Gemini hoặc trả kế hoạch cache nếu dữ liệu đầu vào không đổi. Response có `planId`, `summary`, `roadmap`, `method`, `completedTasks`. Không có `projectedScore` giả.
+- `PATCH /api/skill-gap/{planId}/progress`: `{completedTasks: {"w1-0": true}}`; chỉ chủ kế hoạch, chỉ nhận cột mốc có thật. Kế hoạch thay đổi theo kỹ năng/JD/giờ học; tiến độ gắn với từng kế hoạch.
+- `POST /api/interview/questions`: `{jobId}` tạo ba chủ đề api/database/project bằng Gemini, lưu theo tài khoản. GET cùng đường dẫn trả bộ đã tạo, hoặc bộ tham khảo có `method=question-bank` nếu chưa tạo.
+- Chấm câu hỏi cá nhân hóa chỉ nhận ID thuộc tài khoản; backend lấy câu hỏi/tiêu chí đã lưu để gửi Gemini. Lịch sử lưu bản chụp câu hỏi và response có `method=gemini:<model>`.
+
+Các request Gemini coaching gửi kỹ năng nhận diện từ hồ sơ/CV, mô tả dự án và yêu cầu job; không cần gửi tệp CV gốc. Khi Gemini không tạo/chấm được nội dung cá nhân hóa, API trả 503 và không lưu kết quả thành công giả.
 | GET | `/api/analytics` | recruiter | `totalJobs,totalStudents,marketStats,categoryDistribution,salaryStats,hiringFunnel,totalApplications,scope,updatedAt`; hỗ trợ `category` |
 | GET | `/api/analytics/export.csv` | recruiter | Xuất các quan sát skill demand và salary dạng CSV; hỗ trợ `category` |
 

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>VNG Talent</title>
+  <rect width="128" height="128" rx="64" fill="#d7eee4"/>
+  <path d="M19 128c5-28 20-40 45-40s40 12 45 40" fill="#176447"/>
+  <circle cx="64" cy="56" r="27" fill="#e8ad7f"/>
+  <path d="M36 54c0-25 11-39 29-39 21 0 29 16 27 39-6-5-11-15-13-27-13 12-27 17-43 17z" fill="#283b36"/>
+  <path d="M52 70c8 5 17 5 24 0" fill="none" stroke="#965648" stroke-linecap="round" stroke-width="3"/>
+  <circle cx="54" cy="55" r="2.5" fill="#283b36"/><circle cx="74" cy="55" r="2.5" fill="#283b36"/>
+</svg>

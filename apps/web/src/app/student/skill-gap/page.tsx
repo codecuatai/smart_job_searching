@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
   Calendar,
   BookOpen,
-  ArrowRight,
   AlertTriangle,
   Building2,
   Target
@@ -15,30 +14,58 @@ import { useResource } from '@/lib/useResource';
 import DataState from '@/components/DataState';
 import { SkillGapDiagnosis, Job } from '@/types';
 import { useToast } from '@/context/ToastContext';
+import { api } from '@/lib/api';
 
 export default function SkillGapPage() {
   const { showToast } = useToast();
   const [target, setTarget] = useState('');
+  const [hours, setHours] = useState(6);
+  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState('');
   const jobs = useResource<Job[]>('/jobs');
-  const { data: gapData, error, reload } = useResource<SkillGapDiagnosis>(`/skill-gap${target ? `?jobId=${target}` : ''}`);
+  const { data: gapData, error, reload } = useResource<SkillGapDiagnosis>(`/skill-gap?hoursPerWeek=${hours}${target ? `&jobId=${target}` : ''}`);
 
   const [completedTasks, setCompletedTasks] = useState<{ [key: string]: boolean }>({
 
   });
 
-  const toggleTask = (key: string, taskTitle: string) => {
+  useEffect(() => { setCompletedTasks(gapData?.completedTasks || {}); }, [gapData]);
+
+  const generate = async () => {
+    setBusy(true); setActionError('');
+    try {
+      await api('/skill-gap', { method: 'POST', body: JSON.stringify({ jobId: target || null, hoursPerWeek: hours }) });
+      reload();
+    } catch (err) { setActionError(err instanceof Error ? err.message : 'Không tạo được lộ trình.'); }
+    finally { setBusy(false); }
+  };
+
+  const toggleTask = async (key: string, taskTitle: string) => {
+    if (!gapData?.planId || saving) return;
     const isNowDone = !completedTasks[key];
-    setCompletedTasks((prev) => ({ ...prev, [key]: isNowDone }));
+    const next = { ...completedTasks, [key]: isNowDone };
+    const previous = completedTasks;
+    setCompletedTasks(next);
+    setSaving(true); setActionError('');
+    try {
+      await api(`/skill-gap/${gapData.planId}/progress`, { method: 'PATCH', body: JSON.stringify({ completedTasks: next }) });
     if (isNowDone) {
       showToast('Tiến độ cập nhật', `Hoàn thành cột mốc: ${taskTitle}`, 'success');
     }
+    } catch (err) { setCompletedTasks(previous); setActionError(err instanceof Error ? err.message : 'Không lưu được tiến độ.'); }
+    finally { setSaving(false); }
   };
 
   if (!gapData || error) return <DataState error={error} retry={reload} />;
   return (
     <div className="space-y-6">
       <label className="live-field">Vị trí mục tiêu<select value={target} onChange={e => { setTarget(e.target.value); setCompletedTasks({}); }}><option value="">Vị trí phù hợp nhất</option>{jobs.data?.map(job => <option value={job.id} key={job.id}>{job.title}</option>)}</select></label>
-      <p className="data-notice">Lộ trình dựa trên kỹ năng nhận diện trong hồ sơ. Mức 100% là mục tiêu bao phủ kỹ năng, không phải dự đoán điểm sau khi học. Tiến độ đánh dấu chỉ lưu trong phiên trang hiện tại.</p>
+      <label className="live-field">Giờ học mỗi tuần<select value={hours} onChange={e => setHours(Number(e.target.value))} disabled={busy}>{[3, 6, 10, 15, 20].map(n => <option value={n} key={n}>{n} giờ/tuần</option>)}</select></label>
+      <button type="button" className="live-primary" onClick={generate} disabled={busy}>{busy ? 'Gemini đang tạo lộ trình…' : gapData.planId ? 'Mở lộ trình AI đã lưu' : 'Tạo lộ trình AI'}</button>
+      {actionError && <p className="form-error" role="alert">{actionError}</p>}
+      <p className="data-notice">{gapData.method?.startsWith('gemini:') ? `Được tạo bởi ${gapData.method.replace('gemini:', '')}. Tiến độ được lưu theo tài khoản và vị trí mục tiêu.` : 'Bấm Tạo lộ trình AI để Gemini phân tích kỹ năng trong hồ sơ/CV và yêu cầu vị trí.'} Thời lượng là ước lượng; điểm matching sẽ được tính lại khi bạn cập nhật minh chứng.</p>
+      {gapData.summary && <p role="status">{gapData.summary}</p>}
       {/* Header */}
       <div>
         <Link
@@ -55,7 +82,7 @@ export default function SkillGapPage() {
                 Khoảng trống kỹ năng & lộ trình học
               </h1>
               <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                AI Gap Engine
+                {gapData.planId ? 'Lộ trình Gemini' : 'Kỹ năng cần bổ sung'}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -68,11 +95,6 @@ export default function SkillGapPage() {
               <span className="text-[11px] text-slate-400 block font-medium">Match Hiện tại</span>
               <span className="text-lg font-bold text-amber-700">{gapData.currentScore}%</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-300" />
-            <div>
-              <span className="text-[11px] text-slate-400 block font-medium">Match Sau 2 tuần</span>
-              <span className="text-lg font-bold text-emerald-700">{gapData.projectedScore}%</span>
-            </div>
           </div>
         </div>
       </div>
@@ -81,7 +103,7 @@ export default function SkillGapPage() {
       <div className="bg-white p-5 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-sm">
-            SHO
+            {gapData.company.slice(0, 3).toUpperCase()}
           </div>
           <div>
             <h3 className="font-bold text-base text-slate-900">{gapData.targetJobTitle}</h3>
@@ -183,9 +205,8 @@ export default function SkillGapPage() {
                   const key = `w${weekData.week}-${tIdx}`;
                   const isChecked = !!completedTasks[key];
                   return (
-                    <div
+                    <label
                       key={tIdx}
-                      onClick={() => toggleTask(key, task)}
                       className={`p-3 rounded-lg border transition-all flex items-start space-x-3 cursor-pointer ${
                         isChecked
                           ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
@@ -195,13 +216,14 @@ export default function SkillGapPage() {
                       <input
                         type="checkbox"
                         checked={isChecked}
-                        onChange={() => {}}
+                        disabled={saving}
+                        onChange={() => void toggleTask(key, task)}
                         className="mt-1 h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
                       />
                       <span className={`text-xs sm:text-sm ${isChecked ? 'line-through text-slate-500' : 'font-medium'}`}>
                         {task}
                       </span>
-                    </div>
+                    </label>
                   );
                 })}
               </div>

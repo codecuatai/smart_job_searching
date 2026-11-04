@@ -2,6 +2,8 @@
 
 Hệ thống tìm việc cho sinh viên, gồm web, API và dịch vụ AI cục bộ. Đây là MVP có tài khoản phân quyền, lưu CV/đơn ứng tuyển thật và bộ E2E trên trình duyệt.
 
+Bản nâng cấp TH3: phân tích CV Gemini có bằng chứng/chỉnh sửa/OCR, matching có giải thích, benchmark tách train/validation/test, data mart PostgreSQL và Metabase. Hướng dẫn mới: [Docker, BI và backup/restore](docs/guides/bi-and-recovery.md), [yêu cầu/ERD](docs/guides/requirements-and-data.md), [đánh giá model](data/evaluation/README.md). Chưa có gold labels do người đánh giá; xem báo cáo nghiệm thu để phân biệt chức năng đã chạy và chất lượng AI chưa được xác nhận độc lập.
+
 ## Cấu trúc
 
 ```text
@@ -24,7 +26,7 @@ Hệ thống tìm việc cho sinh viên, gồm web, API và dịch vụ AI cục
 ├── var/data/                 SQLite và CV local, bỏ qua Git
 ├── artifacts/                Báo cáo E2E, screenshot và kết quả chạy, bỏ qua Git
 ├── .env                      File cấu hình duy nhất, không đưa lên Git
-├── compose.yaml              Ba service Docker: web, api, ai
+├── compose.yaml              web, api, ai, warehouse, metabase, bi; e2e theo profile
 ├── requirements*.txt         Dependency Python và lock đã kiểm thử
 └── package.json              Các lệnh điều hành từ thư mục gốc
 ```
@@ -54,13 +56,13 @@ npm run docker:up
 npm run docker:ps
 ```
 
-Mở [localhost:3000](http://127.0.0.1:3000) với `WEB_PORT=3000`. Compose đọc cùng `.env` gốc; địa chỉ kết nối nội bộ `web → api → ai` được tạo từ tên service và cổng, không cần file env riêng trong container.
+Mở [localhost:3000](http://127.0.0.1:3000) với `WEB_PORT=3000`, [Metabase](http://127.0.0.1:3001) với `BI_PORT=3001`. Điền `GEMINI_API_KEY` trong `.env` để dùng phân tích CV/lộ trình/phỏng vấn; model `gemini-3.5-flash-lite`. Compose đọc cùng `.env` gốc; kết nối nội bộ bằng tên service, không cần env riêng trong container.
 
 ```powershell
 npm run docker:down
 ```
 
-Người trong team clone repository chỉ cần cài Docker Desktop và Node.js, sau đó chạy `npm run docker:up`. Lệnh này tự tạo `.env` mặc định nếu thiếu, build đủ web/API/AI, chờ healthcheck rồi mở ứng dụng. Để kiểm thử đúng stack Docker bằng Playwright trong container, chạy `npm run docker:test`; báo cáo vẫn được ghi vào `artifacts/e2e/`. Dừng stack bằng `npm run docker:down`.
+Người trong team clone repository chỉ cần Docker Desktop và Node.js: `npm run env:init`, điền key Gemini, `npm run docker:up`. Lệnh up build ứng dụng/BI và chờ healthcheck. `npm run docker:test` chạy Playwright trên project/volume riêng (:3100/:3101), báo cáo tại `artifacts/e2e/`, giữ nguyên dữ liệu nghiệp vụ. Dừng stack chính bằng `npm run docker:down`, stack test bằng `docker compose -p unitalent-test down`.
 
 Lệnh dừng giữ dữ liệu. Không xóa volume khi cần giữ tài khoản/CV. Bản `.env` trên máy hiện tại đang tham chiếu volume cũ ở chế độ external để bảo toàn dữ liệu sau đổi tên thư mục/service; clone mới dùng volume `unitalent_data`.
 
@@ -90,8 +92,9 @@ Khi `SEED_DEMO=true`, lần chạy đầu tạo tài khoản bên dưới với 
 | --- | --- |
 | Sinh viên | `nam.nguyen@hcmut.edu.vn` |
 | Nhà tuyển dụng | `recruitment@vng.com.vn` |
+| Nhà tuyển dụng | `talent@fptsoftware.com` |
 
-Tin/hồ sơ seed là minh họa. Nút đăng nhập nhanh dùng mật khẩu demo mặc định; nếu đổi mật khẩu seed, nhập bằng form. Không dùng tài khoản demo khi mở dịch vụ công khai.
+Seed tạo sẵn 3 hồ sơ ứng viên, CV PDF minh họa, đơn ứng tuyển theo nhiều trạng thái và tin tuyển dụng mẫu cho cả hai tài khoản nhà tuyển dụng. Mật khẩu mặc định là `demo12345` (hoặc giá trị `DEMO_PASSWORD`); nếu đổi mật khẩu seed, nhập bằng form. Không dùng tài khoản demo khi mở dịch vụ công khai.
 
 ## Chức năng và phạm vi
 
@@ -101,7 +104,7 @@ Tin/hồ sơ seed là minh họa. Nút đăng nhập nhanh dùng mật khẩu de
 - AI đối chiếu kỹ năng + cosine văn bản, giải thích kỹ năng thiếu, sinh lộ trình; luyện phỏng vấn văn bản và lưu lịch sử.
 - BI tổng hợp dữ liệu trong SQLite hiện tại, không khẳng định số liệu thị trường thực.
 
-AI dùng matching hybrid-v2 local cho ranking hàng loạt và Gemini `gemini-3.5-flash-lite` cho tác vụ sinh nội dung như đánh giá phỏng vấn/trích xuất kỹ năng; khi thiếu key hệ thống fallback offline. AST/đạo văn, xác minh commit GitHub, OCR, voice STT/TTS và email tự động chưa triển khai. Xem [trạng thái triển khai](docs/guides/implementation-status.md).
+AI dùng matching hybrid-v2 local cho ranking hàng loạt; Gemini `gemini-3.5-flash-lite` tạo lộ trình học theo hồ sơ/job/giờ học, sinh và chấm câu hỏi phỏng vấn, hỗ trợ endpoint trích xuất CV có evidence. CV scan được OCR tối đa 3 trang đầu bằng Poppler/Tesseract; người dùng kiểm tra và xác nhận extraction trước khi dùng làm matching. Lộ trình/câu hỏi/phân tích AI báo lỗi rõ để thử lại nếu thiếu key hoặc Gemini lỗi. AST/đạo văn, xác minh commit GitHub, voice STT/TTS và email tự động chưa triển khai. Xem [trạng thái triển khai](docs/guides/implementation-status.md).
 
 ## Kiểm thử và build
 

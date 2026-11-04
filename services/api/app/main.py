@@ -1,4 +1,5 @@
 import io
+import hashlib
 import csv
 import json
 import os
@@ -9,16 +10,20 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
-from pypdf import PdfReader
-from .db import db, dump, index_candidate_skills, index_job_skills, index_resume_extraction, init_db
+from .db import db, dump, index_candidate_skills, index_job_skills, index_resume_extraction, init_db, record_origin
 from services.config import allowed_origins
 from .security import current_user, hash_password, require_role, token_hash, verify_password
 from .schemas import Answer, ApplyInput, JobInput, Login, Profile, Register, StageInput
 from .seed import seed_demo
 from .ai_client import ai_request
 from .job_maintenance import delete_job
+from .resume_pdf import MAX_RESUME_BYTES, read_resume_pdf
+from .schemas import CoachingRequest, ProgressRequest
+from .schemas import AnalysisConfirmation
+from .data_quality import parse_salary, classify_origin, canonical_skills
+from .resume_analysis import local_analysis, verify_analysis, ocr_pdf
 
 student_only = require_role('student')
 recruiter_only = require_role('recruiter')
@@ -28,6 +33,9 @@ recruiter_only = require_role('recruiter')
 async def lifespan(_app):
     init_db()
     seed_demo()
+    from .db import backfill_metadata
+    with db() as connection:
+        backfill_metadata(connection)
     yield
 
 
@@ -57,24 +65,29 @@ def uid():
 
 def salary_range(value):
     """Parse common Vietnamese salary strings into VND bounds; ignore negotiable/unparseable values."""
-    text = str(value or '').strip().lower()
-    has_million_unit = any(unit in text for unit in ('triệu', 'tr'))
-    tokens = re.findall(r'\d+(?:[.,]\d+)*', text)
-    if not tokens:
+    salary = parse_salary(value)
+    if salary['status'] != 'parsed' or salary['currency'] != 'VND' or salary['period'] != 'MONTH':
         return None
-    numbers = []
-    for token in tokens[:2]:
-        if has_million_unit:
-            numbers.append(float(token.replace(',', '.')) * 1_000_000)
-        else:
-            numbers.append(float(token.replace('.', '').replace(',', '')))
-    if not has_million_unit and numbers and max(numbers) < 1000:
-        numbers = [number * 1_000_000 for number in numbers]
-    return (min(numbers), max(numbers))
+    if salary['minimum'] is None or salary['maximum'] is None:
+        return None
+    return salary['minimum'], salary['maximum']
 
 
 def public_user(user):
-    return {k: user[k] for k in ('id', 'email', 'name', 'role')}
+    return {k: user[k] for k in ('id', 'email', 'name', 'role')} | {'avatarUrl': avatar_url(user)}
+
+
+def avatar_url(user):
+    """Return a local, privacy-safe avatar asset for a user profile."""
+    profile_value = user['profile'] if 'profile' in user.keys() else user.get('profile')
+    role = user['role'] if 'role' in user.keys() else user.get('role')
+    try:
+        profile = json.loads(profile_value or '{}')
+    except (TypeError, ValueError):
+        profile = {}
+    return profile.get('avatarUrl') or (
+        '/avatars/default-recruiter.svg' if role == 'recruiter' else '/avatars/default-student.svg'
+    )
 
 
 def create_session(user, response):
@@ -89,9 +102,15 @@ def create_session(user, response):
 
 def profile_text(user, connection):
     p = json.loads(user['profile'])
-    latest = connection.execute('SELECT text FROM resumes WHERE user_id=? ORDER BY created_at DESC LIMIT 1', (user['id'],)).fetchone()
+    latest = connection.execute('SELECT r.text,a.data,a.confirmed FROM resumes r LEFT JOIN resume_analysis a ON a.resume_id=r.id WHERE r.user_id=? ORDER BY r.created_at DESC LIMIT 1', (user['id'],)).fetchone()
+    resume_text = latest['text'] if latest else ''
+    if latest and latest['confirmed'] and latest['data']:
+        analysis = json.loads(latest['data'])
+        resume_text = ' '.join([s['name'] for s in analysis['skills']])
+        if analysis.get('experienceYears') is not None:
+            resume_text += f' {analysis["experienceYears"]} years experience'
     return ' '.join([p.get('targetRole', ''), ' '.join(p.get('skills', [])), p.get('projectTitle', ''),
-                     p.get('projectSummary', ''), latest['text'] if latest else ''])[:100000]
+                     p.get('projectSummary', ''), resume_text])[:100000]
 
 
 def job_data(job_id, connection):
@@ -104,7 +123,7 @@ def job_data(job_id, connection):
 def candidate_data(user, application=None, job=None):
     p = json.loads(user['profile'])
     return dict(id=application['id'] if application else user['id'], name=user['name'], email=user['email'],
-                avatarText=user['name'][:1], university=p.get('university', ''), major=p.get('major', ''),
+                avatarText=user['name'][:1], avatarUrl=avatar_url(user), university=p.get('university', ''), major=p.get('major', ''),
                 year=p.get('year', ''), gpa=p.get('gpa', 0), targetRole=job['title'] if job else p.get('targetRole', ''),
                 matchScore=application['score'] if application else 0,
                 status=application['stage'] if application else 'submitted',
@@ -139,6 +158,7 @@ def register(body: Register, response: Response):
         with db() as c:
             c.execute('INSERT INTO users VALUES (?,?,?,?,?,?)',
                       (user['id'], user['email'], user['name'], hash_password(body.password), body.role, '{}'))
+            record_origin(c, 'user', user['id'], classify_origin({}, user['id'], user['email']))
     except sqlite3.IntegrityError as error:
         raise HTTPException(409, 'Email đã được đăng ký.') from error
     return create_session(user, response)
@@ -195,6 +215,14 @@ def jobs(user=Depends(current_user)):
     return data
 
 
+@app.get('/api/jobs/search')
+def search_jobs(q: str = '', category: str = 'all', page: int = Query(1, ge=1), pageSize: int = Query(20, ge=1, le=100), user=Depends(current_user)):
+    term = q.strip().casefold()
+    result = [j for j in jobs(user) if (category == 'all' or j.get('category') == category) and
+              (not term or term in ' '.join([j['title'],j['company'],*j.get('tags',[])]).casefold())]
+    return dict(items=result[(page-1)*pageSize:page*pageSize], total=len(result), page=page, pageSize=pageSize)
+
+
 @app.get('/api/jobs/{job_id}')
 def get_job(job_id: str, user=Depends(current_user)):
     with db() as c:
@@ -212,6 +240,7 @@ def post_job(body: JobInput, user=Depends(recruiter_only)):
                postedAt=now(), matchScore=0, astCleanCodeScore=0, isDemo=False)
     with db() as c:
         c.execute('INSERT INTO jobs VALUES (?,?,?)', (job['id'], user['id'], dump(job)))
+        record_origin(c, 'job', job['id'], classify_origin(job, job['id'], user['email']))
         index_job_skills(c, job['id'], job)
     return job
 
@@ -230,30 +259,86 @@ def remove_job(job_id: str, user=Depends(recruiter_only)):
 def current_resume(user=Depends(student_only)):
     with db() as c:
         row = c.execute('SELECT id,name,length(content) AS size FROM resumes WHERE user_id=? ORDER BY created_at DESC LIMIT 1', (user['id'],)).fetchone()
-    return dict(row) if row else None
+    if not row:
+        return None
+    with db() as c:
+        extraction = c.execute('SELECT data,confirmed FROM resume_analysis WHERE resume_id=?', (row['id'],)).fetchone()
+    return dict(row, analysis=dict(**json.loads(extraction['data']), confirmed=bool(extraction['confirmed'])) if extraction else None)
 
 
 @app.post('/api/resumes', status_code=201)
 def upload_resume(file: UploadFile, user=Depends(student_only)):
-    content = file.file.read(5 * 1024 * 1024 + 1)
-    if len(content) > 5 * 1024 * 1024:
-        raise HTTPException(413, 'CV tối đa 5 MB.')
+    content = file.file.read(MAX_RESUME_BYTES + 1)
     name = (file.filename or 'cv.pdf').replace('\\', '/').split('/')[-1][:200]
-    if not name.lower().endswith('.pdf') or not content.startswith(b'%PDF-'):
-        raise HTTPException(422, 'Vui lòng chọn tệp PDF hợp lệ.')
-    try:
-        reader = PdfReader(io.BytesIO(content))
-        if reader.is_encrypted or len(reader.pages) > 30:
-            raise ValueError('Encrypted or too many pages')
-        text = '\n'.join((page.extract_text() or '')[:10000] for page in reader.pages)[:60000]
-    except Exception as error:
-        raise HTTPException(422, 'Không đọc được PDF. Dùng PDF không khóa, tối đa 30 trang.') from error
+    text, warning = read_resume_pdf(content, name)
     identifier = uid()
     with db() as c:
         c.execute('INSERT INTO resumes VALUES (?,?,?,?,?,?)', (identifier, user['id'], name, content, text, now()))
         index_resume_extraction(c, identifier, text)
         index_candidate_skills(c, user['id'], text, 'resume')
-    return {'id': identifier, 'name': name, 'size': len(content), 'textExtracted': bool(text.strip())}
+        c.execute('INSERT INTO resume_analysis VALUES (?,?,?,?)', (identifier, dump(local_analysis(text)), 0, now()))
+    return {'id': identifier, 'name': name, 'size': len(content), 'textExtracted': bool(text.strip()), 'warning': warning,
+            'analysis': dict(local_analysis(text), confirmed=False)}
+
+
+def owned_resume(resume_id, user):
+    with db() as c:
+        row = c.execute('SELECT * FROM resumes WHERE id=? AND user_id=?', (resume_id, user['id'])).fetchone()
+    if not row:
+        raise HTTPException(404, 'Không tìm thấy CV.')
+    return row
+
+
+@app.post('/api/resumes/{resume_id}/analyze')
+def analyze_resume(resume_id: str, force: bool = False, user=Depends(student_only)):
+    row = owned_resume(resume_id, user)
+    with db() as c:
+        existing = c.execute('SELECT data,confirmed FROM resume_analysis WHERE resume_id=?', (resume_id,)).fetchone()
+    expected = 'gemini:' + os.getenv('GEMINI_MODEL','gemini-3.5-flash-lite')
+    if existing and not force and json.loads(existing['data']).get('method') == expected and json.loads(existing['data']).get('schemaVersion') == 1:
+        return dict(id=resume_id, analysis=dict(**json.loads(existing['data']), confirmed=bool(existing['confirmed'])))
+    text = row['text']
+    partial = False
+    if not text.strip():
+        text, partial = ocr_pdf(row['content'])
+        if not text.strip():
+            raise HTTPException(422, 'CV đã lưu nhưng OCR không nhận được chữ. Hãy nhập kỹ năng thủ công hoặc chọn bản rõ hơn.')
+    text_hash = hashlib.sha256(text.encode()).hexdigest()
+    if not force:
+        with db() as c:
+            prior = c.execute('SELECT a.data FROM resume_analysis a JOIN resumes r ON r.id=a.resume_id WHERE r.user_id=? AND a.confirmed=0 ORDER BY a.updated_at DESC', (user['id'],)).fetchall()
+        for cached in prior:
+            data = json.loads(cached['data'])
+            if data.get('method') == expected and data.get('schemaVersion') == 1 and data.get('textHash') == text_hash:
+                with db() as c:
+                    c.execute('INSERT OR REPLACE INTO resume_analysis VALUES (?,?,?,?)', (resume_id,dump(data),0,now()))
+                return dict(id=resume_id,analysis=dict(data,confirmed=False))
+    result = verify_analysis(ai_request('/resume/analyze', dict(text=text)), text)
+    result.update(ocrUsed=not bool(row['text'].strip()), ocrPartial=partial)
+    with db() as c:
+        c.execute('UPDATE resumes SET text=? WHERE id=?', (text, resume_id))
+        c.execute('INSERT OR REPLACE INTO resume_analysis VALUES (?,?,?,?)', (resume_id, dump(result), 0, now()))
+        index_resume_extraction(c, resume_id, text, 'gemini-evidence-v1')
+    return dict(id=resume_id, analysis=dict(result, confirmed=False))
+
+
+@app.patch('/api/resumes/{resume_id}/analysis')
+def confirm_analysis(resume_id: str, body: AnalysisConfirmation, user=Depends(student_only)):
+    row = owned_resume(resume_id, user)
+    with db() as c:
+        saved = c.execute('SELECT data FROM resume_analysis WHERE resume_id=?', (resume_id,)).fetchone()
+        data = json.loads(saved['data']) if saved else local_analysis(row['text'])
+        evidence = {s['name']: s.get('evidence', '') for s in data['skills']}
+        data['skills'] = [dict(name=s, evidence=evidence.get(s, ''), source='user-confirmed') for s in canonical_skills(body.skills)]
+        if data.get('experienceYears') != body.experienceYears:
+            data['experienceEvidence'] = ''
+        data['experienceYears'] = body.experienceYears
+        data['experienceSource'] = 'user-confirmed'
+        c.execute('INSERT OR REPLACE INTO resume_analysis VALUES (?,?,?,?)', (resume_id, dump(data), 1, now()))
+        latest = c.execute('SELECT id FROM resumes WHERE user_id=? ORDER BY created_at DESC LIMIT 1', (user['id'],)).fetchone()
+        if latest['id'] == resume_id:
+            index_candidate_skills(c, user['id'], ' '.join(s['name'] for s in data['skills']), 'resume')
+    return dict(id=resume_id, analysis=dict(data, confirmed=True))
 
 
 def pdf_response(row):
@@ -279,6 +364,8 @@ def apply(body: ApplyInput, user=Depends(student_only)):
         if not resume:
             raise HTTPException(422, 'Tải CV PDF lên trước khi nộp đơn.')
         text = profile_text(user, c)
+        extraction = c.execute('SELECT data,confirmed FROM resume_analysis WHERE resume_id=?',(resume['id'],)).fetchone()
+        frozen_analysis = dict(**json.loads(extraction['data']),confirmed=bool(extraction['confirmed'])) if extraction else {}
     prediction = ai_request('/match', dict(profileText=text, jobs=[job]))[0]
     score = prediction['matchScore']
     identifier, timestamp = uid(), now()
@@ -291,6 +378,7 @@ def apply(body: ApplyInput, user=Depends(student_only)):
             c.execute('INSERT INTO model_predictions VALUES (?,?,?,?,?,?,?,?)',
                       (uid(), user['id'], body.jobId, resume['id'], prediction.get('modelVersion', prediction.get('method', 'baseline-v1')),
                        score, prediction.get('explanation', ''), timestamp))
+            c.execute('INSERT INTO prediction_snapshots VALUES (?,?,?)', (identifier, dump(prediction), dump(frozen_analysis)))
     except sqlite3.IntegrityError as error:
         raise HTTPException(409, 'Bạn đã ứng tuyển vị trí này.') from error
     return {'id': identifier, 'stage': 'submitted'}
@@ -299,12 +387,13 @@ def apply(body: ApplyInput, user=Depends(student_only)):
 def application_rows(user):
     with db() as c:
         field = 'a.student_id' if user['role'] == 'student' else 'j.owner_id'
-        rows = c.execute(f'''SELECT a.*, j.data AS job, u.name AS applicant_name,
+        rows = c.execute(f'''SELECT a.*, j.data AS job, u.name AS applicant_name, u.profile AS applicant_profile,
             r.name AS resume_name, length(r.content) AS size FROM applications a
             JOIN jobs j ON j.id=a.job_id JOIN users u ON u.id=a.student_id
             JOIN resumes r ON r.id=a.resume_id WHERE {field}=? ORDER BY a.created_at DESC''', (user['id'],)).fetchall()
     return [dict(id=r['id'], jobId=r['job_id'], jobTitle=json.loads(r['job'])['title'],
                  company=json.loads(r['job'])['company'], applicantName=r['applicant_name'], resumeName=r['resume_name'],
+                 applicantAvatarUrl=json.loads(r['applicant_profile'] or '{}').get('avatarUrl', '/avatars/default-student.svg'),
                  size=r['size'], submittedAt=r['created_at'], updatedAt=r['updated_at'], stage=r['stage'],
                  matchScore=r['score'], note='Điểm phù hợp được tính tại thời điểm nộp hồ sơ.',
                  interviewSchedule=json.loads(r['schedule']) if r['schedule'] else None) for r in rows]
@@ -356,6 +445,17 @@ def candidates(user=Depends(recruiter_only)):
     return result
 
 
+@app.get('/api/candidates/search')
+def search_candidates(q: str = '', role: str = 'all', stage: str = 'all', minMatch: int = Query(0, ge=0, le=100), sort: str = 'match', page: int = Query(1, ge=1), pageSize: int = Query(20, ge=1, le=100), user=Depends(recruiter_only)):
+    roles = {'backend':['backend','java','go'], 'data':['data','analyst','bi'], 'frontend':['frontend','react'], 'devops':['devops','cloud','sre']}
+    term = q.strip().casefold()
+    result = [c for c in candidates(user) if (stage == 'all' or c['status'] == stage) and c['matchScore'] >= minMatch
+              and (role == 'all' or any(k in c['targetRole'].casefold() for k in roles.get(role,[role])))
+              and (not term or term in ' '.join([c['name'],c['university'],c['targetRole'],c['featuredProject']['title'],*c['featuredProject']['techStack']]).casefold())]
+    result.sort(key=lambda c: c['appliedDate'] if sort == 'recent' else c['matchScore'], reverse=True)
+    return dict(items=result[(page-1)*pageSize:page*pageSize],total=len(result),page=page,pageSize=pageSize)
+
+
 @app.get('/api/candidates/{application_id}')
 def candidate(application_id: str, user=Depends(recruiter_only)):
     row = authorized_application(application_id, user)
@@ -365,101 +465,184 @@ def candidate(application_id: str, user=Depends(recruiter_only)):
     return candidate_data(applicant, row, job)
 
 
-@app.get('/api/skill-gap')
-def skill_gap(jobId: str | None = None, user=Depends(student_only)):
+def coaching_target(user, job_id=None):
+    if job_id:
+        return get_job(job_id, user)
     recommendations = jobs(user)
-    job = next((j for j in recommendations if j['id'] == jobId), None) if jobId else next(iter(recommendations), None)
+    job = next(iter(recommendations), None)
     if not job:
         raise HTTPException(404, 'Chưa có vị trí mục tiêu.')
+    return job
+
+
+def coaching_context(user, job):
+    from services.ai.app.engine import extract_skills
+    profile = json.loads(user['profile'])
+    with db() as c:
+        skills = extract_skills(profile_text(user, c))
+    return dict(recognizedSkills=skills, targetRole=profile.get('targetRole', ''),
+                projectTitle=profile.get('projectTitle', ''), projectSummary=profile.get('projectSummary', '')[:1500],
+                job={k: job.get(k) for k in ('id', 'title', 'tags', 'requirements', 'description')})
+
+
+def plan_fingerprint(context, hours):
+    return hashlib.sha256(dump(dict(context=context, hoursPerWeek=hours)).encode()).hexdigest()
+
+
+def plan_result(row):
+    return dict(**json.loads(row['data']), planId=row['id'], completedTasks=json.loads(row['progress']))
+
+
+@app.get('/api/skill-gap')
+def skill_gap(jobId: str | None = None, hoursPerWeek: int = 6, user=Depends(student_only)):
+    job = coaching_target(user, jobId)
     missing = job.get('missingSkills', [])
+    fingerprint = plan_fingerprint(coaching_context(user, job), hoursPerWeek)
+    with db() as c:
+        saved = c.execute('SELECT * FROM learning_plans WHERE user_id=? AND job_id=? AND input_hash=?',
+                          (user['id'], job['id'], fingerprint)).fetchone()
+    if saved:
+        result = plan_result(saved)
+        result['currentScore'] = job['matchScore']
+        return result
     return dict(targetJobTitle=job['title'], company=job['company'], currentScore=job['matchScore'],
-                projectedScore=100, explanation=job.get('explanation'),
+                method='not-generated', planId=None, completedTasks={}, hoursPerWeek=hoursPerWeek,
+                summary='Chọn số giờ học mỗi tuần và tạo lộ trình bằng Gemini.',
                 gaps=[dict(skill=s, currentLevel='Chưa nhận diện trong hồ sơ', requiredLevel='Theo yêu cầu tin tuyển dụng',
                            importance='recommended', gapDescription='Bổ sung dự án hoặc minh chứng kỹ năng này.') for s in missing],
-                roadmap=[dict(week=i+1, timeRange=f'Chặng {i+1}', focusTitle=s,
-                              milestones=[f'Ôn tập nền tảng {s}', f'Xây dựng ví dụ {s} có kiểm thử', 'Cập nhật minh chứng vào hồ sơ'],
-                              curatedResource=f'Tài liệu chính thức {s}') for i, s in enumerate(missing)])
+                roadmap=[])
+
+
+@app.post('/api/skill-gap')
+def generate_skill_gap(body: CoachingRequest, user=Depends(student_only)):
+    job = coaching_target(user, body.jobId)
+    context = coaching_context(user, job)
+    fingerprint = plan_fingerprint(context, body.hoursPerWeek)
+    with db() as c:
+        existing = c.execute('SELECT * FROM learning_plans WHERE user_id=? AND job_id=? AND input_hash=?',
+                             (user['id'], job['id'], fingerprint)).fetchone()
+    if existing:
+        return plan_result(existing)
+    generated = ai_request('/roadmap', dict(context=context, missingSkills=job.get('missingSkills', []), hoursPerWeek=body.hoursPerWeek))
+    from services.ai.app.coaching import Plan
+    plan = Plan.model_validate(generated).model_dump()
+    base = skill_gap(job['id'], body.hoursPerWeek, user)
+    data = {k: v for k, v in base.items() if k not in ('planId', 'completedTasks')}
+    data.update(plan, method=generated['method'])
+    with db() as c:
+        c.execute('INSERT OR IGNORE INTO learning_plans (id,user_id,job_id,input_hash,data,created_at) VALUES (?,?,?,?,?,?)',
+                  (uid(), user['id'], job['id'], fingerprint, dump(data), now()))
+        saved = c.execute('SELECT * FROM learning_plans WHERE user_id=? AND job_id=? AND input_hash=?',
+                          (user['id'], job['id'], fingerprint)).fetchone()
+    return plan_result(saved)
+
+
+@app.patch('/api/skill-gap/{plan_id}/progress')
+def save_plan_progress(plan_id: str, body: ProgressRequest, user=Depends(student_only)):
+    with db() as c:
+        row = c.execute('SELECT * FROM learning_plans WHERE id=? AND user_id=?', (plan_id, user['id'])).fetchone()
+        if row is None:
+            raise HTTPException(404, 'Không tìm thấy lộ trình.')
+        data = json.loads(row['data'])
+        allowed = {f'w{step["week"]}-{index}' for step in data['roadmap'] for index in range(len(step['milestones']))}
+        if not set(body.completedTasks) <= allowed:
+            raise HTTPException(422, 'Cột mốc không thuộc lộ trình này.')
+        c.execute('UPDATE learning_plans SET progress=? WHERE id=?', (dump(body.completedTasks), plan_id))
+    return {'completedTasks': body.completedTasks}
 
 
 @app.get('/api/analytics')
-def analytics(category: str | None = None, user=Depends(recruiter_only)):
-    from collections import Counter, defaultdict
+def analytics(category: str | None = None, dataset: str | None = None, location: str | None = None,
+              source: str | None = None, dateFrom: str | None = None, dateTo: str | None = None,
+              funnelFrom: str | None = None, funnelTo: str | None = None,
+              user=Depends(recruiter_only)):
+    from .analytics import report
+    dataset = dataset or os.getenv('ANALYTICS_DATASET', 'real')
+    if dataset not in ('real', 'demo', 'test'):
+        raise HTTPException(422, 'Nguồn dữ liệu không hợp lệ.')
+    for date in (dateFrom, dateTo,funnelFrom,funnelTo):
+        if date:
+            try:
+                datetime.strptime(date, '%Y-%m-%d')
+            except ValueError as error:
+                raise HTTPException(422, 'Ngày lọc cần có dạng YYYY-MM-DD.') from error
+    if dateFrom and dateTo and dateFrom > dateTo:
+        raise HTTPException(422, 'Ngày bắt đầu phải trước ngày kết thúc.')
+    if funnelFrom and funnelTo and funnelFrom > funnelTo:
+        raise HTTPException(422,'Ngày bắt đầu cohort phải trước ngày kết thúc.')
     with db() as c:
-        all_jobs = [json.loads(r['data']) for r in c.execute('SELECT data FROM jobs')]
-        if category and category != 'all':
-            all_jobs = [job for job in all_jobs if job.get('category') == category]
-        profiles = [json.loads(r['profile']) for r in c.execute("SELECT profile FROM users WHERE role='student'")]
-        applications = c.execute('''SELECT COUNT(*) AS total FROM applications a
-            JOIN jobs j ON j.id=a.job_id WHERE j.owner_id=?''', (user['id'],)).fetchone()['total']
-        reached = {row['stage']: row['count'] for row in c.execute('''SELECT e.stage, COUNT(DISTINCT e.application_id) AS count
-            FROM application_stage_events e JOIN applications a ON a.id=e.application_id
-            JOIN jobs j ON j.id=a.job_id WHERE j.owner_id=? GROUP BY e.stage''', (user['id'],))}
-    categories = Counter(j['category'] for j in all_jobs)
-    demand = Counter(s for j in all_jobs for s in set(j.get('tags', [])))
-    supply = Counter(s for p in profiles for s in set(p.get('skills', [])))
-    market = []
-    for skill, count in demand.most_common(10):
-        d = round(100 * count / len(all_jobs))
-        s = round(100 * supply[skill] / len(profiles)) if profiles else 0
-        market.append(dict(skill=skill, demandPercentage=d, supplyPercentage=s, shortagePercentage=max(0, d-s)))
-    salaries = defaultdict(lambda: [0, 0])
-    salary_counts = Counter()
-    for job in all_jobs:
-        bounds = salary_range(job.get('salary'))
-        if bounds:
-            salaries[job['category']][0] += bounds[0]
-            salaries[job['category']][1] += bounds[1]
-            salary_counts[job['category']] += 1
-    salary_stats = [dict(category=category, sampleSize=salary_counts[category],
-                         averageMinimumVnd=round(salaries[category][0] / salary_counts[category]),
-                         averageMaximumVnd=round(salaries[category][1] / salary_counts[category]))
-                    for category in sorted(salary_counts)]
-    funnel = []
-    previous_count = applications
-    for stage, label in [('submitted', 'Đã nộp'), ('reviewing', 'Đang xem xét'),
-                         ('interview', 'Phỏng vấn'), ('offered', 'Đề nghị')]:
-        count = applications if stage == 'submitted' else reached.get(stage, 0)
-        funnel.append(dict(stage=stage, label=label, count=count,
-                           reachedPercentage=round(count / applications * 100) if applications else 0,
-                           conversionFromPreviousPercentage=round(count / previous_count * 100) if previous_count else 0))
-        previous_count = count
-    return dict(totalJobs=len(all_jobs), totalStudents=len(profiles), updatedAt=now(), marketStats=market,
-                categoryDistribution=[dict(category=k, jobCount=v, percentage=round(v/len(all_jobs)*100)) for k, v in categories.items()],
-                salaryStats=salary_stats, hiringFunnel=funnel, totalApplications=applications,
-                scope='Dữ liệu trong ứng dụng; kỹ năng thống kê theo nhãn chính xác, không đại diện thị trường lao động.')
+        result = report(c, user['id'], dataset, category=category, location=location,
+                        source=source, date_from=dateFrom, date_to=dateTo,funnel_from=funnelFrom,funnel_to=funnelTo)
+    result['biUrl'] = os.getenv('BI_PUBLIC_URL', 'http://127.0.0.1:3001')
+    return result
 
 
 @app.get('/api/analytics/export.csv')
-def analytics_export(category: str | None = None, user=Depends(recruiter_only)):
-    with db() as c:
-        jobs_data = [json.loads(row['data']) for row in c.execute('SELECT data FROM jobs')]
-    if category and category != 'all':
-        jobs_data = [job for job in jobs_data if job.get('category') == category]
-    demand = {}
-    for job in jobs_data:
-        for skill in set(job.get('tags', [])):
-            demand[skill] = demand.get(skill, 0) + 1
+def analytics_export(category: str | None = None, dataset: str | None = None, location: str | None = None,
+                     source: str | None = None, dateFrom: str | None = None, dateTo: str | None = None,
+                     funnelFrom: str | None = None, funnelTo: str | None = None,
+                     user=Depends(recruiter_only)):
+    result = analytics(category,dataset,location,source,dateFrom,dateTo,funnelFrom,funnelTo,user)
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['metric', 'category', 'value', 'sample_size'])
-    for skill, count in sorted(demand.items(), key=lambda item: (-item[1], item[0])):
-        writer.writerow(['skill_demand', skill, round(100 * count / len(jobs_data)) if jobs_data else 0, len(jobs_data)])
-    for job in jobs_data:
-        bounds = salary_range(job.get('salary'))
-        if bounds:
-            writer.writerow(['salary_observation', job.get('category', ''), f'{bounds[0]:.0f}-{bounds[1]:.0f}', 1])
+    writer.writerow(['metric', 'category', 'value', 'sample_size', 'currency', 'period'])
+    for skill in result['marketStats']:
+        writer.writerow(['candidate_count', skill['skill'], skill['candidateCount'], result['totalStudents'], '', ''])
+        writer.writerow(['job_demand', skill['skill'], skill['jobCount'], result['totalJobs'], '', ''])
+    for salary in result['salaryTrends']:
+        writer.writerow(['salary_median', salary['month'], salary['median'], salary['sampleSize'], salary['currency'], salary['period']])
     return StreamingResponse(iter([output.getvalue()]), media_type='text/csv; charset=utf-8',
                              headers={'Content-Disposition': 'attachment; filename="unitalent-analytics.csv"'})
 
 
+@app.get('/api/analytics/warehouse')
+def warehouse_status(user=Depends(recruiter_only)):
+    host = os.getenv('WAREHOUSE_HOST')
+    if not host:
+        return {'status': 'not-configured', 'biUrl': os.getenv('BI_PUBLIC_URL', 'http://127.0.0.1:3001')}
+    try:
+        import psycopg
+        with psycopg.connect(host=host, dbname='unitalent_analytics', user='bi_reader', password=os.getenv('BI_READER_PASSWORD','Local-BI-Reader-4829'), connect_timeout=3) as connection:
+            row = connection.execute('SELECT refreshed_at,job_count,candidate_count FROM refresh_status WHERE id=1').fetchone()
+        return dict(status='ok', refreshedAt=row[0].isoformat() if row else None,
+                    jobCount=row[1] if row else 0, candidateCount=row[2] if row else 0,
+                    biUrl=os.getenv('BI_PUBLIC_URL', 'http://127.0.0.1:3001'))
+    except Exception:
+        return {'status': 'unavailable', 'biUrl': os.getenv('BI_PUBLIC_URL', 'http://127.0.0.1:3001')}
+
+
 @app.get('/api/interview/questions')
 def interview_questions(user=Depends(student_only)):
-    return ai_request('/interview/questions')
+    with db() as c:
+        rows = c.execute('SELECT id,topic,question,method FROM coaching_questions WHERE user_id=? ORDER BY rowid', (user['id'],)).fetchall()
+    return [dict(row) for row in rows] or [dict(q, topic=q['id'], method='question-bank') for q in ai_request('/interview/questions')]
+
+
+@app.post('/api/interview/questions')
+def create_interview_questions(body: CoachingRequest, user=Depends(student_only)):
+    job = coaching_target(user, body.jobId)
+    result = ai_request('/interview/questions', dict(context=coaching_context(user, job)))
+    from services.ai.app.coaching import QuestionSet
+    questions = QuestionSet.model_validate(result).questions
+    with db() as c:
+        c.execute('DELETE FROM coaching_questions WHERE user_id=?', (user['id'],))
+        for q in questions:
+            c.execute('INSERT INTO coaching_questions VALUES (?,?,?,?,?,?,?)',
+                      (uid(), user['id'], q.topic, q.question, dump(q.keywords), result['method'], now()))
+    return interview_questions(user)
 
 
 @app.post('/api/interview/evaluate')
 def interview_evaluate(body: Answer, user=Depends(student_only)):
-    result = ai_request('/interview/evaluate', body.model_dump())
+    with db() as c:
+        custom = c.execute('SELECT * FROM coaching_questions WHERE id=? AND user_id=?', (body.questionId, user['id'])).fetchone()
+    payload = body.model_dump()
+    if custom:
+        payload.update(question=custom['question'], keywords=json.loads(custom['keywords']))
+    elif body.questionId not in ('api', 'database', 'project'):
+        raise HTTPException(404, 'Không tìm thấy câu hỏi trong tài khoản của bạn.')
+    result = ai_request('/interview/evaluate', payload)
+    result['question'] = custom['question'] if custom else body.questionId
     with db() as c:
         c.execute('INSERT INTO interviews VALUES (?,?,?,?,?,?)', (uid(), user['id'], body.questionId, body.answer, dump(result), now()))
     return result

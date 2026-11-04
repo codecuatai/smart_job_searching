@@ -69,7 +69,7 @@ Trên máy đang tái cấu trúc, DATA_VOLUME được giữ là `unitalent-e2e
 
 Mật khẩu seed không được cập nhật ngược vào tài khoản đã có. Nút demo trên giao diện dùng mật khẩu mặc định; nếu đổi DEMO_PASSWORD, đăng nhập bằng form với mật khẩu thực của tài khoản.
 
-Gemini được dùng cho đánh giá câu trả lời phỏng vấn và trích xuất kỹ năng qua endpoint AI. Matching hàng loạt vẫn dùng model hybrid-v2 local để không gửi hàng trăm request LLM cho một trang danh sách; nếu Gemini thiếu key hoặc lỗi, hai tác vụ sinh nội dung tự động fallback về rubric/taxonomy local.
+Gemini tạo lộ trình theo hồ sơ/job/giờ học, sinh câu hỏi phỏng vấn và đánh giá đúng câu hỏi đã lưu; endpoint trích xuất kỹ năng cũng hỗ trợ Gemini. Matching hàng loạt vẫn dùng hybrid-v2 local. Lộ trình và câu hỏi cá nhân hóa không fallback mẫu tĩnh khi Gemini lỗi: API trả 503 để người dùng thử lại. Chỉ endpoint skills và chấm bộ câu hỏi tham khảo cũ giữ fallback local với nhãn method tương ứng. API chờ ít nhất 35 giây hoặc `GEMINI_TIMEOUT_SECONDS + 10` giây để dịch vụ AI có thời gian trả lỗi.
 
 ## Git
 

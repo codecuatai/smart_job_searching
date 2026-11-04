@@ -21,7 +21,7 @@ Python + FastAPI. Matching mặc định `hybrid-v2` là bộ phân loại logis
 6. `hybrid-v2` dùng logistic score từ coverage, cosine và tỷ lệ số kỹ năng yêu cầu; nếu không có model thì dùng `round(100 × (0.85 × coverage + 0.15 × cosine))`. Nếu JD không có kỹ năng nào trong từ điển, chỉ dùng cosine.
 7. Trả điểm, `matchedSkills`, `missingSkills`, coverage, cosine, `modelVersion`, method và giải thích số kỹ năng khớp.
 
-Không cộng điểm AST hoặc số năm kinh nghiệm giả. Điểm phản ánh từ khóa trong văn bản, dễ bị tác động bởi tự khai báo; không xác minh kỹ năng thực tế. Không hiểu phủ định (ví dụ “chưa biết Python”), không đánh giá mức độ thành thạo; từ điển hữu hạn nên không bao phủ mọi ngành.
+Không cộng điểm AST hoặc số năm kinh nghiệm chưa có bằng chứng. Điểm phản ánh kỹ năng/ngữ nghĩa trong văn bản và model artifact, dễ bị tác động bởi tự khai báo; không xác minh năng lực thực tế. Matcher xử lý các phủ định phổ biến (ví dụ “chưa biết Python”) nhưng chưa hiểu mọi ngữ cảnh; từ điển hữu hạn nên không bao phủ mọi ngành. CV extraction Gemini lưu evidence để người dùng xác nhận; scan OCR có giới hạn trang/thời gian.
 
 ## Endpoint
 
@@ -35,7 +35,9 @@ Không cộng điểm AST hoặc số năm kinh nghiệm giả. Điểm phản �
 
 Đánh giá phỏng vấn ưu tiên Gemini với JSON schema được kiểm tra và giới hạn điểm 0–100. Khi Gemini không khả dụng, fallback rubric local tối đa 30 điểm theo độ dài và 70 điểm theo tỷ lệ khái niệm từ khóa. Kết quả không dùng để tự động loại ứng viên. Lịch sử được backend lưu theo tài khoản; AI service không lưu câu trả lời sau request.
 
-Lộ trình kỹ năng được backend sinh từ `missingSkills`: mỗi kỹ năng là một chặng ôn nền tảng → xây ví dụ có test → cập nhật hồ sơ. Mục tiêu bao phủ 100% không phải dự báo điểm tương lai. Không có đề xuất khóa học cá nhân hóa hoặc dữ liệu khóa học bên ngoài.
+Lộ trình được Gemini tạo qua `POST /roadmap` dựa trên kỹ năng nhận diện, mô tả dự án, JD và số giờ học/tuần. Output được kiểm tra bằng Pydantic, gồm summary và các tuần/bài tập/tiêu chí nghiệm thu/tên tài liệu. Không dự báo điểm matching tương lai. Backend cache theo nội dung đầu vào và lưu tiến độ từng kế hoạch.
+
+`POST /interview/questions` tạo ba câu hỏi theo hồ sơ/job; backend lưu theo tài khoản. `/interview/evaluate` nhận nguyên câu hỏi và keywords đã lưu để Gemini chấm, thay vì tra bộ câu hỏi cố định. Các tác vụ coaching mới trả 503 khi Gemini lỗi, không thay bằng kế hoạch mẫu hay báo thành công giả. Chưa tích hợp STT/TTS.
 
 ## Mở rộng
 

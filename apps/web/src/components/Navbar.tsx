@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ArrowUpRight, BarChart3, BriefcaseBusiness, ChevronDown, Code2, FileText, GraduationCap, LogOut, Menu, Mic2, Plus, SearchCheck, Users, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -31,7 +32,6 @@ export default function Navbar({ currentRole }: { currentRole: RoleType }) {
   const links = currentRole === 'student' ? studentLinks : recruiterLinks;
   const active = links.find(link => pathname === link.href || pathname.startsWith(`${link.href}/`));
   const name = user?.name || '';
-  const initials = name.slice(0, 1);
 
   const switchRole = (role: RoleType) => {
     setRoleOpen(false);
@@ -76,7 +76,7 @@ export default function Navbar({ currentRole }: { currentRole: RoleType }) {
               <button onClick={() => switchRole('recruiter')}>Nhà tuyển dụng</button>
             </div>}
           </div>
-          <div className="workspace-account"><span className="workspace-avatar">{initials}</span><span><strong>{name}</strong><small>{currentRole === 'student' ? 'Ứng viên' : 'Doanh nghiệp'}</small></span><button title="Đăng xuất" aria-label="Đăng xuất" onClick={() => logout().then(() => router.push('/login')).catch(error => showToast('Không thể đăng xuất', error.message, 'warning'))}><LogOut size={17} /></button></div>
+          <div className="workspace-account"><span className="workspace-avatar"><Image src={user?.avatarUrl || (currentRole === 'student' ? '/avatars/default-student.svg' : '/avatars/default-recruiter.svg')} alt={`Ảnh đại diện của ${name || 'tài khoản'}`} width={30} height={30} /></span><span><strong>{name}</strong><small>{currentRole === 'student' ? 'Ứng viên' : 'Doanh nghiệp'}</small></span><button title="Đăng xuất" aria-label="Đăng xuất" onClick={() => logout().then(() => router.push('/login')).catch(error => showToast('Không thể đăng xuất', error.message, 'warning'))}><LogOut size={17} /></button></div>
         </div>
       </aside>
     </>

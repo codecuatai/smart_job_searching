@@ -10,7 +10,7 @@ Tại thư mục gốc, cách khuyến nghị là chạy toàn bộ E2E trong Do
 npm run docker:test
 ```
 
-`docker:test` build và khởi động web/API/AI, chờ healthcheck, sau đó chạy Playwright trong service `e2e` trên cùng network Docker với `E2E_BASE_URL=http://web:3000`. Không cần Python virtualenv, npm dependencies hoặc trình duyệt cài trên máy host.
+`docker:test` build và khởi động web/API/AI/warehouse/Metabase/ETL trong project `unitalent-test` và volume riêng, chờ healthcheck rồi chạy Playwright với `E2E_BASE_URL=http://web:3100`. Web test :3100, BI test :3101, dữ liệu app chính :3000 giữ nguyên. Cần key Gemini thật cho các ca live AI. Không cần Python/dependencies/browser trên host.
 
 Lệnh test tự sinh báo cáo HTML/JSON vào `artifacts/e2e/`. Nếu máy đã cài dependencies của `apps/web`, có thể mở report tương tác bằng `npm run test:e2e:report`.
 
@@ -36,18 +36,22 @@ Trên Windows sau khi cài Chromium, đặt `$env:PLAYWRIGHT_CHANNEL='chromium'`
 
 Nếu kiểm thử server khác, đặt `E2E_BASE_URL` trong `.env` gốc; nếu bỏ trống, runner suy ra từ WEB_PORT. Chỉ trỏ tới môi trường thử nghiệm vì suite tạo tài khoản, tin và đơn ứng tuyển thật. Mỗi lần chạy dùng ID/email duy nhất, không phụ thuộc dữ liệu của lần trước. Chưa có API xóa tài khoản; dữ liệu tên `E2E ...`/email `@example.test` thuộc dữ liệu synthetic. Không chạy bộ test này vào production.
 
-## Phạm vi 8 ca
+## Phạm vi 28 ca
 
-Chạy cùng 4 kịch bản trên **desktop 1440×900** và **mobile 390×844**:
+Chạy 14 kịch bản trên **desktop 1440×900** và **mobile 390×844**. Ngoài các ca bên dưới, có Gemini CV extraction + chỉnh/xác nhận + giải thích matching; PDF raster qua OCR thật; 6 Metabase SQL questions thực thi thành công.
 
 | Kịch bản | Những điều được kiểm chứng |
 | --- | --- |
 | Đăng nhập và phân quyền | Trang riêng chuyển về login khi chưa xác thực; mật khẩu sai có lỗi; đăng nhập đúng; phiên giữ sau reload; không vào trang/API recruiter bằng student; logout thu hồi cookie/session |
-| CV | Đăng ký từ UI; báo chưa có CV; từ chối PDF giả; nhận PDF có text; CV vẫn hiện đúng sau reload |
-| Tuyển dụng toàn trình | Hai tài khoản độc lập đăng ký từ UI; recruiter đăng tin; student sửa hồ sơ, upload CV, tìm việc, xem chi tiết và nộp; nộp trùng có lỗi; lộ trình chỉ đúng kỹ năng thiếu; đổi CV tăng điểm phù hợp; recruiter tải đúng CV phiên bản cũ (so SHA-256); lưu lịch; student đọc được lịch; recruiter khác bị chặn đọc/sửa/tải hồ sơ |
-| Phỏng vấn | Trả lời, nhận điểm/feedback, lịch sử có nội dung đúng và giữ sau reload; đổi chủ đề đúng câu hỏi |
+| CV cơ bản | Đăng ký từ UI; PDF giả/hỏng có lỗi cố định; PDF có text và PDF có BOM được lưu; lỗi upload không thay CV cũ; CV vẫn hiện đúng sau reload |
+| Sáu biến thể PDF | File rỗng, khóa mật khẩu, hạn chế quyền không cần mật khẩu mở, 31 trang, quá 5 MB, không có lớp chữ; kiểm tra status, thông báo, reload và SHA-256 bản tải về |
+| Validation và bộ lọc | Trùng email, mật khẩu sai, GPA sai, student không đọc analytics; lọc ngành, tìm kiếm không có kết quả và xóa bộ lọc |
+| Tuyển dụng toàn trình | Hai tài khoản độc lập; đăng tin; chặn thiếu CV/trùng; skill gap đổi khi thay CV; Gemini tạo lộ trình theo 6 giờ học/tuần, checklist lưu sau reload và không có projectedScore giả; bộ lọc ứng viên; CV snapshot SHA-256; lịch hẹn; phân quyền; BI và CSV |
+| Phỏng vấn | Gemini tạo ba câu hỏi theo hồ sơ/job; kiểm tra provider, chấm đúng câu đã lưu, điểm/feedback và lịch sử sau reload; đổi đúng câu hỏi theo chủ đề |
 
 Các trang chính còn được kiểm tra không tràn ngang ở viewport tương ứng. Đây là kiểm thử Chromium/Edge, chưa phải chứng nhận tương thích Safari/Firefox hoặc kiểm toán accessibility đầy đủ.
+
+Ca phỏng vấn chờ response API tối đa 35 giây, kiểm tra HTTP 200, điểm 0–100 và `method=gemini:...` trước khi kiểm tra kết quả UI. Lộ trình/câu hỏi được tạo qua Gemini thật, không mock. File JSON lộ trình và câu hỏi/đánh giá được đính kèm vào report. Lỗi HTTP 503 hoặc provider không phải Gemini làm test thất bại. Job tạo trong workflow được xóa trong `finally` cùng lộ trình liên quan; tài khoản/CV synthetic vẫn ở database test.
 
 ## Mã nguồn và bằng chứng
 
