@@ -29,7 +29,8 @@ def register(client, email, role='student'):
 
 def new_job(client):
     response = client.post('/api/jobs', json=dict(title='Python Engineer', location='HCM', category='backend',
-                           description='Build a Python API with SQL.', tags=['Python', 'SQL', 'Docker'], requirements=['Python', 'SQL']))
+                           salary='15.000.000 - 20.000.000 VNĐ', description='Build a Python API with SQL.',
+                           tags=['Python', 'SQL', 'Docker'], requirements=['Python', 'SQL']))
     assert response.status_code == 201, response.text
     return response.json()
 
@@ -68,12 +69,20 @@ def test_real_application_lifecycle_access_and_resume_snapshot(clients):
     schedule = dict(date='2026-11-01', time='09:30', format='Office', interviewer='Tech Lead')
     assert recruiter.patch(f'/api/applications/{identifier}', json={'stage': 'interview'}).status_code == 422
     assert recruiter.patch(f'/api/applications/{identifier}', json={'stage': 'interview', 'interviewSchedule': dict(schedule, date='2026-99-99')}).status_code == 422
+    assert recruiter.patch(f'/api/applications/{identifier}', json={'stage': 'reviewing'}).status_code == 200
     changed = recruiter.patch(f'/api/applications/{identifier}', json={'stage': 'interview', 'interviewSchedule': schedule})
     assert changed.status_code == 200
     tracked = student.get('/api/applications').json()[0]
     assert tracked['stage'] == 'interview' and tracked['interviewSchedule'] == schedule
     assert recruiter.get('/api/candidates').json()[0]['id'] == identifier
-    assert recruiter.get('/api/analytics').json()['totalJobs'] == 1
+    analytics = recruiter.get('/api/analytics').json()
+    assert analytics['totalJobs'] == 1
+    assert analytics['salaryStats'] == [dict(category='backend', sampleSize=1, averageMinimumVnd=15_000_000, averageMaximumVnd=20_000_000)]
+    funnel = {item['stage']: item for item in analytics['hiringFunnel']}
+    assert funnel['submitted']['count'] == 1
+    assert funnel['reviewing']['count'] == 1 and funnel['reviewing']['conversionFromPreviousPercentage'] == 100
+    assert funnel['interview']['count'] == 1 and funnel['interview']['reachedPercentage'] == 100
+    assert analytics['totalApplications'] == 1
 
 
 def test_auth_validation_upload_limits_and_logout(clients):

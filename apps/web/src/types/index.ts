@@ -124,3 +124,18 @@ export interface CategoryDistribution {
   percentage: number;
   jobCount: number;
 }
+
+export interface SalaryStatItem {
+  category: string;
+  sampleSize: number;
+  averageMinimumVnd: number;
+  averageMaximumVnd: number;
+}
+
+export interface HiringFunnelItem {
+  stage: ApplicationStage;
+  label: string;
+  count: number;
+  reachedPercentage: number;
+  conversionFromPreviousPercentage: number;
+}

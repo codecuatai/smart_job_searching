@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import re
 import secrets
 import sqlite3
 import time
@@ -56,7 +57,7 @@ def salary_range(value):
     """Parse common Vietnamese salary strings into VND bounds; ignore negotiable/unparseable values."""
     text = str(value or '').strip().lower()
     has_million_unit = any(unit in text for unit in ('triệu', 'tr'))
-    tokens = __import__('re').findall(r'\d+(?:[.,]\d+)*', text)
+    tokens = re.findall(r'\d+(?:[.,]\d+)*', text)
     if not tokens:
         return None
     numbers = []
@@ -358,7 +359,7 @@ def skill_gap(jobId: str | None = None, user=Depends(student_only)):
 
 @app.get('/api/analytics')
 def analytics(user=Depends(recruiter_only)):
-    from collections import Counter
+    from collections import Counter, defaultdict
     with db() as c:
         all_jobs = [json.loads(r['data']) for r in c.execute('SELECT data FROM jobs')]
         profiles = [json.loads(r['profile']) for r in c.execute("SELECT profile FROM users WHERE role='student'")]
@@ -375,7 +376,7 @@ def analytics(user=Depends(recruiter_only)):
         d = round(100 * count / len(all_jobs))
         s = round(100 * supply[skill] / len(profiles)) if profiles else 0
         market.append(dict(skill=skill, demandPercentage=d, supplyPercentage=s, shortagePercentage=max(0, d-s)))
-    salaries = Counter()
+    salaries = defaultdict(lambda: [0, 0])
     salary_counts = Counter()
     for job in all_jobs:
         bounds = salary_range(job.get('salary'))

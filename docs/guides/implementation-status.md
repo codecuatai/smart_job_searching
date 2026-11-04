@@ -1,6 +1,6 @@
 # Trạng thái triển khai
 
-Mốc cập nhật: **28/10/2026**. Phạm vi bàn giao: MVP full-stack chạy local, ba dịch vụ và tài liệu để phát triển tiếp.
+Mốc cập nhật: **04/11/2026**. Phạm vi bàn giao: MVP full-stack chạy local, ba dịch vụ và tài liệu để phát triển tiếp.
 
 | Chức năng | Hiện trạng |
 | --- | --- |
@@ -9,12 +9,12 @@ Mốc cập nhật: **28/10/2026**. Phạm vi bàn giao: MVP full-stack chạy l
 | Chỉnh hồ sơ / CV PDF | Chạy thật, giới hạn 5 MB / 30 trang, text extraction |
 | Đăng tin tuyển dụng | Lưu SQLite, công ty/owner lấy từ tài khoản đăng nhập |
 | Tìm kiếm / lọc jobs và candidates | Lọc tại frontend trên dữ liệu API; chưa phân trang server |
-| Ghép việc | NLP baseline với từ điển kỹ năng, 85% coverage + 15% cosine |
+| Ghép việc | NLP baseline với từ điển kỹ năng mở rộng, 85% coverage + 15% cosine; chưa huấn luyện trên dữ liệu gán nhãn |
 | Ứng tuyển / tải CV | Chạy thật, unique một đơn/job/student, CV snapshot |
 | Pipeline / lịch phỏng vấn | Chạy thật trong ứng dụng; refresh để nhận dữ liệu mới |
 | Lộ trình kỹ năng | Sinh từ skills thiếu, checklist chỉ tồn tại khi mở trang |
 | Phỏng vấn | Văn bản, bộ câu hỏi cố định, rubric từ khóa/độ dài, lưu lịch sử |
-| BI | Tổng hợp dữ liệu SQLite, nhãn kỹ năng chính xác; không khẳng định thị trường thực |
+| BI | Tổng hợp kỹ năng, lương đăng tuyển và lịch sử funnel tuyển dụng từ SQLite; không khẳng định số liệu thị trường thực |
 | Đọc PDF scan | Lưu được file nhưng không OCR; nhập kỹ năng thủ công |
 | GitHub AST / SOLID / vulnerability scan | Chưa triển khai; không dùng chỉ số mock để xác minh ứng viên |
 | Phát hiện đạo văn / xác minh commit | Chưa triển khai |

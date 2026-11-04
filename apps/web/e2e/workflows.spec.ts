@@ -171,14 +171,22 @@ test('complete recruitment workflow across two users with immutable CV and sched
     const actual = await readFile((await file.path())!);
     expect(createHash('sha256').update(actual).digest('hex')).toBe(createHash('sha256').update(initialPdf).digest('hex'));
 
-    await recruiter.getByRole('combobox', { name: 'Trạng thái', exact: true }).selectOption('interview');
+    const stageSelect = recruiter.getByRole('combobox', { name: 'Trạng thái', exact: true });
+    await stageSelect.selectOption('reviewing');
+    const refreshedCandidate = recruiter.waitForResponse(r => r.request().method() === 'GET' && r.url().endsWith(`/api/candidates/${applicationId}`) && r.status() === 200);
+    await recruiter.getByRole('button', { name: 'Lưu cập nhật' }).click();
+    await expect(recruiter.getByRole('heading', { name: 'Đã lưu trạng thái', exact: true }).first()).toBeVisible();
+    await refreshedCandidate;
+    await expect(stageSelect).toHaveValue('reviewing');
+    await stageSelect.selectOption('interview');
+    await expect(recruiter.getByLabel('Ngày', { exact: true })).toBeVisible();
     const date = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
     await recruiter.getByLabel('Ngày', { exact: true }).fill(date);
     await recruiter.getByLabel('Giờ (Việt Nam)', { exact: true }).fill('09:30');
     await recruiter.getByLabel('Địa điểm / thông tin cuộc họp', { exact: true }).fill(`E2E Meeting ${token}`);
     await recruiter.getByLabel('Người phỏng vấn', { exact: true }).fill('E2E Tech Lead');
     await recruiter.getByRole('button', { name: 'Lưu cập nhật' }).click();
-    await expect(recruiter.getByRole('heading', { name: 'Đã lưu trạng thái', exact: true })).toBeVisible();
+    await expect(recruiter.getByRole('heading', { name: 'Đã lưu trạng thái', exact: true }).first()).toBeVisible();
     await student.goto('/student/applications');
     await expect(student.getByText(`E2E Meeting ${token}`, { exact: true })).toBeVisible();
     await expect(student.getByText(`${date} (09:30)`, { exact: true })).toBeVisible();
@@ -193,6 +201,13 @@ test('complete recruitment workflow across two users with immutable CV and sched
     expect((await outsider.request.get(`/api/applications/${applicationId}/resume`)).status()).toBe(404);
     expect((await outsider.request.patch(`/api/applications/${applicationId}`, { data: { stage: 'offered' } })).status()).toBe(404);
     expect(await (await outsider.request.get('/api/candidates')).json()).toEqual([]);
+    await recruiter.goto('/recruiter/analytics');
+    await expect(recruiter.getByRole('heading', { name: 'Xu hướng lương đăng tuyển', exact: true })).toBeVisible();
+    const salaryPanel = recruiter.locator('section.analytics-category-panel').filter({ has: recruiter.getByRole('heading', { name: 'Xu hướng lương đăng tuyển', exact: true }) });
+    await expect(salaryPanel.getByText(/\d+\.\d+–\d+\.\d+ triệu/).first()).toBeVisible();
+    await expect(recruiter.getByRole('heading', { name: 'Chuyển đổi tuyển dụng', exact: true })).toBeVisible();
+    await expect(recruiter.getByText(/100% so với giai đoạn trước/).first()).toBeVisible();
+    await noHorizontalOverflow(recruiter);
   } finally {
     for (const context of contexts) await context.close();
   }

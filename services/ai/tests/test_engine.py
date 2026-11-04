@@ -8,6 +8,11 @@ def test_skill_aliases_boundaries_and_vietnamese():
     assert {'JavaScript', 'TypeScript', 'Spring Boot', 'SQL', 'PostgreSQL', 'Star Schema', 'Next.js', 'Kubernetes'} <= set(skills)
 
 
+def test_common_ai_cloud_and_web_skills_are_extracted():
+    skills = extract_skills('Django, Node.js, C++, AWS, Power BI, PyTorch and Vue.js')
+    assert {'Django', 'Node.js', 'C++', 'AWS', 'Power BI', 'PyTorch', 'Vue.js'} <= set(skills)
+
+
 def test_profile_changes_recompute_score_and_explanation():
     job = {'id': '1', 'tags': ['Python', 'SQL', 'Docker'], 'requirements': [], 'description': ''}
     empty = match('', job)
