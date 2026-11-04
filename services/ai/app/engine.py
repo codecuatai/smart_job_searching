@@ -95,14 +95,24 @@ def cosine(a, b):
     return sum(n * y[t] for t, n in x.items()) / denominator if denominator else 0.0
 
 
-def matching_features(profile_text, job):
+def matching_features(profile_text, job, resume_text=''):
     required_text = ' '.join(job.get('tags', []) + job.get('requirements', []) + job.get('mustHaveSkills', []) + job.get('niceToHaveSkills', []))
     required = set(extract_skills(required_text))
-    owned = set(extract_skills(profile_text))
+    profile_owned = set(extract_skills(profile_text))
+    resume_owned = set(extract_skills(resume_text))
+    owned = profile_owned | resume_owned
     matched = sorted(required & owned)
     missing = sorted(required - owned)
-    coverage = len(matched) / len(required) if required else 0
-    similarity = cosine(profile_text, required_text + ' ' + job.get('description', ''))
+    # A CV is the primary evidence.  Profile fields are useful as a small
+    # supplement (for example a skill omitted from the PDF), but cannot turn a
+    # mostly-unrelated CV into a near-perfect match.
+    if required:
+        cv_matched = required & resume_owned
+        profile_only = required & (profile_owned - resume_owned)
+        coverage = (0.8 * len(cv_matched) + 0.2 * len(profile_only)) / len(required) if resume_text.strip() else len(matched) / len(required)
+    else:
+        coverage = 0
+    similarity = cosine((resume_text + ' ' + profile_text).strip(), required_text + ' ' + job.get('description', ''))
     return required, matched, missing, coverage, similarity, min(len(required), 10) / 10
 
 
@@ -114,12 +124,12 @@ def tfidf_similarity(a, b, idf):
     return sum(value*y.get(word,0) for word,value in x.items())/denominator if denominator else 0.0
 
 
-def feature_values(profile_text, job, idf=None):
-    required, matched, missing, coverage, similarity, ratio = matching_features(profile_text, job)
+def feature_values(profile_text, job, idf=None, resume_text=''):
+    required, matched, missing, coverage, similarity, ratio = matching_features(profile_text, job, resume_text)
     if idf:
-        similarity = tfidf_similarity(profile_text, ' '.join(job.get('tags', [])+job.get('requirements', []))+' '+job.get('description',''), idf)
+        similarity = tfidf_similarity((resume_text + ' ' + profile_text).strip(), ' '.join(job.get('tags', [])+job.get('requirements', []))+' '+job.get('description',''), idf)
     must = set(extract_skills(' '.join(job.get('mustHaveSkills', [])))) or required-set(extract_skills(' '.join(job.get('niceToHaveSkills', []))))
-    years = re.search(r'(\d+(?:\.\d+)?)\s*(?:years?|nam)\s*(?:of )?(?:experience|kinh nghiem)', normalize(profile_text))
+    years = re.search(r'(\d+(?:\.\d+)?)\s*(?:years?|nam)\s*(?:of )?(?:experience|kinh nghiem)', normalize((resume_text + ' ' + profile_text).strip()))
     needed = job.get('minimumExperienceYears')
     experience = min(float(years[1])/needed, 1) if needed and years else 0
     return dict(coverage=coverage, cosineSimilarity=similarity, requiredSkillRatio=ratio,
@@ -127,12 +137,14 @@ def feature_values(profile_text, job, idf=None):
                 experienceFit=experience)
 
 
-def match(profile_text, job):
+def match(profile_text, job, resume_text=''):
     # Only explicit tags/requirements define required skills; prose is used for cosine.
-    required, matched, missing, coverage, similarity, required_ratio = matching_features(profile_text, job)
-    features = feature_values(profile_text, job, MATCHING_MODEL.get('idf'))
+    required, matched, missing, coverage, similarity, required_ratio = matching_features(profile_text, job, resume_text)
+    features = feature_values(profile_text, job, MATCHING_MODEL.get('idf'), resume_text)
     similarity = features['cosineSimilarity']
-    if not profile_text.strip() or not extract_skills(profile_text):
+    profile_skills = set(extract_skills(profile_text))
+    resume_skills = set(extract_skills(resume_text))
+    if not profile_text.strip() and not resume_text.strip() or not (profile_skills | resume_skills):
         # A blank profile/CV must never receive a non-zero recommendation score.
         score = 0
         method = MATCHING_MODEL['version']
@@ -157,6 +169,10 @@ def match(profile_text, job):
         # One generic tag (most often SQL/English) is weak evidence. Keep the
         # ranking useful but prevent a one-skill job from displaying 90%+.
         score = min(score, 65)
+    if resume_text.strip() and not resume_skills and profile_skills:
+        # A text-bearing CV with no recognized CV skill must not be rescued by
+        # profile-only tags.  Keep it visible for review, but deliberately low.
+        score = min(score, 45)
     return {'matchScore': score, 'matchedSkills': matched, 'missingSkills': missing,
             'coverage': round(coverage, 4), 'cosineSimilarity': round(similarity, 4),
             'modelVersion': MATCHING_MODEL['version'], 'method': method,
@@ -164,8 +180,8 @@ def match(profile_text, job):
             'missingMustHaveSkills': sorted(set(extract_skills(' '.join(job.get('mustHaveSkills', []))))-set(matched)),
             'trainingData': MATCHING_MODEL.get('dataProvenance','10 synthetic fixture pairs; not an independent quality estimate'),
             'scoreMeaning': 'Điểm xếp hạng tham khảo, không phải xác suất được tuyển.',
-            'evidence': [dict(skill=s,quote=next((line.strip()[:300] for line in profile_text.splitlines() if s in extract_skills(line)), '') ) for s in matched],
-            'explanation': f'Khớp {len(matched)}/{len(required)} kỹ năng nhận diện được. Điểm tham khảo, không phải xác minh năng lực.'}
+            'evidence': [dict(skill=s,quote=next((line.strip()[:300] for line in (resume_text + '\n' + profile_text).splitlines() if s in extract_skills(line)), '') ) for s in matched],
+            'explanation': f"Khớp {len(matched)}/{len(required)} kỹ năng nhận diện được; CV chiếm trọng số chính (80%), hồ sơ bổ sung 20%. Điểm tham khảo, không phải xác minh năng lực."}
 
 
 QUESTIONS = [

@@ -11,13 +11,14 @@ function formatSize(bytes: number) {
 }
 
 export default function ResumeManager() {
-  const { resume, resumeId, analysis, isLoaded, uploadResume, error, refresh } = useResume();
+  const { resume, resumeId, analysis, isLoaded, uploadResume, updateAnalysis, error, refresh } = useResume();
   const { showToast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState('');
+  const [confirming, setConfirming] = useState(false);
   const [skillsDraft, setSkillsDraft] = useState('');
   const [yearsDraft, setYearsDraft] = useState('');
   useEffect(() => {
@@ -32,12 +33,13 @@ export default function ResumeManager() {
     finally { setAnalyzing(false); }
   };
   const confirm = async () => {
-    setAnalyzing(true); setAnalysisError('');
+    setConfirming(true); setAnalysisError('');
     try {
-      await api(`/resumes/${resumeId}/analysis`, { method: 'PATCH', body: JSON.stringify({ skills: skillsDraft.split(',').map(s => s.trim()).filter(Boolean), experienceYears: yearsDraft === '' ? null : Number(yearsDraft) }) });
-      await refresh(); showToast('Đã lưu phân tích CV', 'Kết quả matching sẽ dùng các kỹ năng bạn xác nhận.', 'success');
+      const result = await api<{ analysis: NonNullable<typeof analysis> }>(`/resumes/${resumeId}/analysis`, { method: 'PATCH', body: JSON.stringify({ skills: skillsDraft.split(',').map(s => s.trim()).filter(Boolean), experienceYears: yearsDraft === '' ? null : Number(yearsDraft) }) });
+      if (result.analysis) updateAnalysis(result.analysis);
+      showToast('Đã xác nhận phân tích CV', 'Kết quả matching sẽ ưu tiên nội dung CV và các kỹ năng bạn vừa xác nhận.', 'success');
     } catch (err) { setAnalysisError(err instanceof Error ? err.message : 'Không lưu được phân tích.'); }
-    finally { setAnalyzing(false); }
+    finally { setConfirming(false); }
   };
 
   useEffect(() => {
@@ -112,7 +114,7 @@ export default function ResumeManager() {
         {!!analysis.education?.length && <p>Học vấn: {analysis.education.join(' · ')}</p>}
         {!!analysis.projects?.length && <p>Dự án: {analysis.projects.join(' · ')}</p>}
         {!!analysis.unknown?.length && <p>Cần làm rõ: {analysis.unknown.join(' · ')}</p>}
-        <button type="button" className="resume-upload-button" onClick={confirm} disabled={analyzing || uploading}>Xác nhận phân tích CV</button>
+        <button type="button" className="resume-upload-button" onClick={() => void confirm()} disabled={analyzing || confirming || uploading}>{confirming ? 'Đang lưu xác nhận…' : 'Xác nhận phân tích CV'}</button>
       </div>}
     </section>
   );

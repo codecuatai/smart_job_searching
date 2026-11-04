@@ -60,3 +60,18 @@ def test_sparse_crawled_tags_do_not_inflate_one_skill_match():
 def test_blank_profile_stays_zero_even_for_single_tag_job():
     result = match('', {'id': 'single', 'tags': ['SQL'], 'requirements': [], 'description': 'SQL reporting'})
     assert result['matchScore'] == 0
+
+
+def test_cv_is_primary_signal_and_profile_is_only_a_small_supplement():
+    job = {'id': 'cv-primary', 'tags': ['Python', 'SQL', 'Docker'], 'requirements': [], 'description': ''}
+    result = match('SQL Docker', job, 'Python')
+    assert result['matchedSkills'] == ['Docker', 'Python', 'SQL']
+    # 80% of the CV skill plus 20% for each profile-only skill, divided by 3.
+    assert result['coverage'] == 0.4
+    assert 'CV chiếm trọng số chính' in result['explanation']
+
+
+def test_unrecognized_cv_does_not_get_a_high_profile_only_score():
+    job = {'id': 'cv-empty', 'tags': ['Python'], 'requirements': [], 'description': ''}
+    result = match('Python', job, 'Nội dung CV không có kỹ năng nhận diện')
+    assert result['matchScore'] <= 45

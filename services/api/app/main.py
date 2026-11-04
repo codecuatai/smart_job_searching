@@ -102,15 +102,42 @@ def create_session(user, response):
 
 def profile_text(user, connection):
     p = json.loads(user['profile'])
-    latest = connection.execute('SELECT r.text,a.data,a.confirmed FROM resumes r LEFT JOIN resume_analysis a ON a.resume_id=r.id WHERE r.user_id=? ORDER BY r.created_at DESC LIMIT 1', (user['id'],)).fetchone()
-    resume_text = latest['text'] if latest else ''
-    if latest and latest['confirmed'] and latest['data']:
-        analysis = json.loads(latest['data'])
-        resume_text = ' '.join([s['name'] for s in analysis['skills']])
+    profile = ' '.join([p.get('targetRole', ''), ' '.join(p.get('skills', [])), p.get('projectTitle', ''), p.get('projectSummary', '')])
+    _, resume = matching_text(user, connection)
+    return ' '.join([profile, resume])[:100000]
+
+
+def matching_text(user, connection):
+    """Return editable profile text and CV evidence as separate signals.
+
+    Keeping these fields separate prevents a profile tag from outweighing a
+    missing skill in the uploaded CV.  Confirmed AI skills are appended to the
+    CV signal so a scanned/demo PDF still participates in matching.
+    """
+    p = json.loads(user['profile'])
+    profile = ' '.join([p.get('targetRole', ''), ' '.join(p.get('skills', [])),
+                        p.get('projectTitle', ''), p.get('projectSummary', '')])
+    latest = connection.execute(
+        'SELECT r.text,a.data,a.confirmed FROM resumes r LEFT JOIN resume_analysis a ON a.resume_id=r.id '
+        'WHERE r.user_id=? ORDER BY r.created_at DESC LIMIT 1', (user['id'],)).fetchone()
+    if not latest:
+        return profile[:100000], ''
+    resume = latest['text'] or ''
+    if latest['data']:
+        try:
+            analysis = json.loads(latest['data'])
+        except (TypeError, ValueError):
+            analysis = {}
+        # Once the candidate confirms the extraction, the edited evidence list
+        # is authoritative for matching. Before confirmation, retain the raw
+        # PDF text so local extraction can still recommend jobs immediately.
+        if latest['confirmed']:
+            resume = ' '.join(s.get('name', '') for s in analysis.get('skills', []))
+        else:
+            resume += ' ' + ' '.join(s.get('name', '') for s in analysis.get('skills', []))
         if analysis.get('experienceYears') is not None:
-            resume_text += f' {analysis["experienceYears"]} years experience'
-    return ' '.join([p.get('targetRole', ''), ' '.join(p.get('skills', [])), p.get('projectTitle', ''),
-                     p.get('projectSummary', ''), resume_text])[:100000]
+            resume += f' {analysis["experienceYears"]} years experience'
+    return profile[:100000], resume[:100000]
 
 
 def job_data(job_id, connection):
@@ -203,13 +230,13 @@ def jobs(user=Depends(current_user)):
     with db() as c:
         rows = c.execute('SELECT * FROM jobs ORDER BY rowid DESC').fetchall()
         data = [json.loads(row['data']) for row in rows]
-        text = profile_text(user, c) if user['role'] == 'student' else ''
+        profile, resume_text = matching_text(user, c) if user['role'] == 'student' else ('', '')
     if user['role'] == 'student' and data:
         # The AI service accepts at most 500 jobs per request. Imported sources
         # can exceed that limit; score every batch before globally sorting.
         matches = {}
         for start in range(0, len(data), 500):
-            matches.update({m['id']: m for m in ai_request('/match', dict(profileText=text, jobs=data[start:start + 500]))})
+            matches.update({m['id']: m for m in ai_request('/match', dict(profileText=profile, resumeText=resume_text, jobs=data[start:start + 500]))})
         data = [dict(job, **{k: v for k, v in matches[job['id']].items() if k != 'id'}) for job in data]
         data.sort(key=lambda job: job['matchScore'], reverse=True)
     return data
@@ -227,9 +254,9 @@ def search_jobs(q: str = '', category: str = 'all', page: int = Query(1, ge=1), 
 def get_job(job_id: str, user=Depends(current_user)):
     with db() as c:
         _, job = job_data(job_id, c)
-        text = profile_text(user, c)
+        profile, resume_text = matching_text(user, c)
     if user['role'] == 'student':
-        result = ai_request('/match', dict(profileText=text, jobs=[job]))[0]
+        result = ai_request('/match', dict(profileText=profile, resumeText=resume_text, jobs=[job]))[0]
         job.update({k: v for k, v in result.items() if k != 'id'})
     return job
 
@@ -363,10 +390,10 @@ def apply(body: ApplyInput, user=Depends(student_only)):
         resume = c.execute('SELECT id FROM resumes WHERE user_id=? ORDER BY created_at DESC LIMIT 1', (user['id'],)).fetchone()
         if not resume:
             raise HTTPException(422, 'Tải CV PDF lên trước khi nộp đơn.')
-        text = profile_text(user, c)
+        profile, resume_text = matching_text(user, c)
         extraction = c.execute('SELECT data,confirmed FROM resume_analysis WHERE resume_id=?',(resume['id'],)).fetchone()
         frozen_analysis = dict(**json.loads(extraction['data']),confirmed=bool(extraction['confirmed'])) if extraction else {}
-    prediction = ai_request('/match', dict(profileText=text, jobs=[job]))[0]
+    prediction = ai_request('/match', dict(profileText=profile, resumeText=resume_text, jobs=[job]))[0]
     score = prediction['matchScore']
     identifier, timestamp = uid(), now()
     try:

@@ -14,6 +14,7 @@ export interface ResumeAnalysis {
 interface ResumeValue {
   resume: File | null; isLoaded: boolean; submissions: ResumeApplication[]; error: string;
   refresh: () => Promise<void>; uploadResume: (file: File) => Promise<void>;
+  updateAnalysis: (analysis: ResumeAnalysis) => void;
   submitApplication: (job: Job, applicantName: string) => Promise<void>;
   downloadSubmittedResume: (id: string) => Promise<void>;
   resumeId: string; analysis: ResumeAnalysis | null;
@@ -85,7 +86,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const downloadSubmittedResume = async (id: string) => {
     await download(`/applications/${id}/resume`, submissions.find(s => s.id === id)?.resumeName || 'cv.pdf');
   };
-  return <Context.Provider value={{ resume, resumeId, analysis, isLoaded, submissions, error, refresh, uploadResume, submitApplication, downloadSubmittedResume }}>{children}</Context.Provider>;
+  const updateAnalysis = useCallback((next: ResumeAnalysis) => setAnalysis(next), []);
+  return <Context.Provider value={{ resume, resumeId, analysis, isLoaded, submissions, error, refresh, uploadResume, updateAnalysis, submitApplication, downloadSubmittedResume }}>{children}</Context.Provider>;
 }
 export function useResume() {
   const value = useContext(Context);
