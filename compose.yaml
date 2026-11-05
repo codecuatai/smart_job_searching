@@ -5,6 +5,8 @@ services:
       dockerfile: services/ai/Dockerfile
     environment:
       AI_PORT: ${AI_PORT:-8001}
+      APP_ENV: ${APP_ENV:-production}
+      AI_TEST_FIXTURES: ${AI_TEST_FIXTURES:-false}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
       GEMINI_ENABLED: ${GEMINI_ENABLED:-true}
@@ -71,6 +73,7 @@ services:
       E2E_BASE_URL: http://web:${WEB_PORT:-3000}
       PLAYWRIGHT_CHANNEL: ""
       BI_TEST_URL: http://metabase:3000
+      E2E_AI_MODE: ${E2E_AI_MODE:-live}
       BI_ADMIN_EMAIL: ${BI_ADMIN_EMAIL:-bi-admin@unitalent.local}
       BI_ADMIN_PASSWORD: ${BI_ADMIN_PASSWORD:-Local-BI-Admin-4829!}
     volumes:
@@ -79,7 +82,7 @@ services:
     depends_on:
       web:
         condition: service_healthy
-    command: ["bash", "-lc", "npm ci --no-audit --no-fund && npm run test:e2e"]
+    command: ["bash", "-lc", "timeout 300 npm ci --no-audit --no-fund --fetch-retries=1 --fetch-timeout=60000 && npm run test:e2e"]
   warehouse:
     image: postgres:17.6-alpine
     environment:

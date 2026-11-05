@@ -41,7 +41,7 @@ def test_negation_preserves_affirmative_context_and_alias_boundaries():
 
 
 def test_must_have_and_experience_are_explicit_features():
-    result=match('Python 2 years experience',dict(tags=['Python','SQL'],requirements=[],description='',mustHaveSkills=['SQL'],niceToHaveSkills=['Python'],minimumExperienceYears=4))
+    result=match('',dict(tags=['Python','SQL'],requirements=[],description='',mustHaveSkills=['SQL'],niceToHaveSkills=['Python'],minimumExperienceYears=4), 'Python 2 years experience')
     assert result['missingMustHaveSkills'] == ['SQL']
     factors={f['feature']:f for f in result['scoreFactors']}
     assert factors['mustHaveCoverage']['value'] == 0
@@ -67,7 +67,7 @@ def test_cv_is_primary_signal_and_profile_is_only_a_small_supplement():
     result = match('SQL Docker', job, 'Python')
     assert result['matchedSkills'] == ['Docker', 'Python', 'SQL']
     # 80% of the CV skill plus 20% for each profile-only skill, divided by 3.
-    assert result['coverage'] == 0.4
+    assert result['coverage'] == 0.4667
     assert 'CV chiếm trọng số chính' in result['explanation']
 
 
@@ -82,4 +82,37 @@ def test_low_information_crawled_listing_cannot_show_ninety_percent():
            'requirements': ['Python', 'GitLab CI', 'Jenkins', 'Robot Framework'], 'description': ''}
     result = match('', job, 'Python CI/CD')
     assert result['matchScore'] < 80
-    assert result['coverage'] == 0.8
+    assert result['coverage'] == 1
+
+
+def test_uploading_same_evidence_never_lowers_score_and_profile_only_is_provisional():
+    job = dict(tags=['Python','SQL','Docker','FastAPI','Git'], requirements=[], description='')
+    skills = 'Python SQL Docker FastAPI Git'
+    provisional = match(skills, job)
+    with_cv = match(skills, job, skills)
+    assert provisional['matchScore'] <= 20 < with_cv['matchScore']
+    assert provisional['scoreStatus'] == 'insufficient-cv'
+    assert with_cv['scoreStatus'] == 'cv-based'
+
+
+def test_explicit_experience_requirement_changes_final_score():
+    job = dict(tags=['Python','SQL','Docker','FastAPI','Git'], requirements=[], description='', minimumExperienceYears=5)
+    junior = match('', job, 'Python SQL Docker FastAPI Git 1 years experience')
+    senior = match('', job, 'Python SQL Docker FastAPI Git 8 years experience')
+    assert junior['matchScore'] < senior['matchScore']
+    assert any(a['code'] == 'experience-gap' for a in junior['adjustments'])
+    assert junior['rawScore'] + sum(a['delta'] for a in junior['adjustments']) == junior['finalScore']
+
+
+def test_confirmed_removal_preserves_context_without_readding_removed_skills():
+    job = dict(tags=['Python','Docker'], requirements=[], description='deployed platform')
+    result = match('', job, 'Python Docker deployed platform', {'skills':[{'name':'Python','evidence':'Python deployed platform'}], 'experienceYears':None})
+    assert result['matchedSkills'] == ['Python']
+    assert result['missingSkills'] == ['Docker']
+    assert result['evidence'][0]['quote'] == 'Python deployed platform'
+
+
+def test_requirement_quality_counts_items_not_alias_expansion():
+    from services.ai.app.engine import requirement_quality
+    job = dict(tags=['PostgreSQL','Unknown Platform'], requirements=[])
+    assert requirement_quality(job, {'PostgreSQL','SQL'}) == .5

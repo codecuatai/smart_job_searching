@@ -50,6 +50,13 @@ def ai_request(path, body=None):
                     _matches.popitem(last=False)
         return result
     except httpx.HTTPStatusError as error:
+        if error.response.status_code == 503:
+            try:
+                detail = error.response.json().get('detail')
+            except ValueError:
+                detail = None
+            if isinstance(detail, dict) and detail.get('code') in {'provider-unavailable','provider-timeout','provider-quota','provider-configuration','provider-invalid-output','ai-not-configured'}:
+                raise HTTPException(503, {key: detail[key] for key in ('code','message','retryable','requestId') if key in detail}) from error
         if 400 <= error.response.status_code < 500:
             raise HTTPException(error.response.status_code, 'Yêu cầu AI không hợp lệ hoặc câu hỏi không tồn tại.') from error
         raise HTTPException(503, 'Dịch vụ AI trả lỗi. Vui lòng thử lại.') from error

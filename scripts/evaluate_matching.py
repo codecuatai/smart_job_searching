@@ -23,7 +23,7 @@ def main() -> int:
     parser.add_argument('--input', default=str(ROOT / 'data/evaluation/matching_pairs.jsonl'))
     args = parser.parse_args()
     rows = load_rows(Path(args.input))
-    predicted = [match(row['profileText'], row['job'])['matchScore'] for row in rows]
+    predicted = [match(row['profileText'] if 'resumeText' in row else '', row['job'], row.get('resumeText', row['profileText']))['matchScore'] for row in rows]
     expected = [row['label'] for row in rows]
     predicted_class = [2 if score >= 75 else 1 if score >= 35 else 0 for score in predicted]
     accuracy = sum(a == b for a, b in zip(expected, predicted_class)) / len(rows)

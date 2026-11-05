@@ -29,7 +29,9 @@ def main() -> int:
     vectors = []
     labels = []
     for row in rows:
-        _, _, _, coverage, similarity, required_ratio = matching_features(row['profileText'], row['job'])
+        # Legacy fixture profileText holds CV content, not supplemental fields.
+        profile = row['profileText'] if 'resumeText' in row else ''
+        _, _, _, coverage, similarity, required_ratio = matching_features(profile, row['job'], row.get('resumeText', row['profileText']))
         vectors.append([1.0, coverage, similarity, required_ratio])
         labels.append(row['label'] / 2)
     weights = [0.0] * 4

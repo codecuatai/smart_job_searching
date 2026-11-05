@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { useResource } from '@/lib/useResource';
 import DataState from '@/components/DataState';
 import ResumeManager from '@/components/ResumeManager';
+import { PageHeader } from '@/components/WorkspaceUI';
 
 interface Profile {
   university: string; major: string; year: string; gpa: number; targetRole: string;
@@ -29,9 +30,11 @@ export default function ProfilePage() {
   };
   if (!data || error) return <DataState error={error} retry={reload} />;
   return <div className="live-page">
-    <header><h1>Hồ sơ năng lực</h1><p>{user?.name} · {user?.email}</p></header>
-    <p className="data-notice">Kỹ năng và dự án do bạn khai báo được dùng để gợi ý việc làm. Hệ thống chưa xác minh GitHub, AST, đạo văn hoặc kinh nghiệm làm việc.</p>
-    <form className="live-panel live-form" onSubmit={save}>
+    <PageHeader title="Hồ sơ năng lực" description={`${user?.name} · CV là bằng chứng chính để gợi ý việc làm.`} />
+    <nav className="section-tabs" aria-label="Các phần hồ sơ"><a href="#resume-heading">CV & phân tích</a><a href="#profile-fields">Thông tin bổ sung</a></nav>
+    <ResumeManager />
+    <form id="profile-fields" className="live-panel live-form" onSubmit={save}>
+      <p className="field-hint">Thông tin bổ sung giúp hệ thống hiểu định hướng của bạn. Dữ liệu này không thay thế bằng chứng trong CV.</p>
       <h2>Học vấn & định hướng</h2>
       <div className="live-grid">
         {(['university', 'major', 'year', 'targetRole'] as const).map(key => <label className="live-field" key={key}>
@@ -48,6 +51,5 @@ export default function ProfilePage() {
       {saveError && <p role="alert" className="form-error">{saveError}</p>}
       <button className="live-primary" disabled={busy}>{busy ? 'Đang lưu…' : 'Lưu hồ sơ'}</button>
     </form>
-    <ResumeManager />
   </div>;
 }

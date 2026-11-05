@@ -54,8 +54,8 @@
   },
   "candidateDeployed": false,
   "selectionBasis": "validation only; never select on held-out test",
-  "datasetHash": "96704f5c6210c95c4381e69da63a7cf217598f8c0c951d09cd6f859c2d7f520c",
-  "latencyMsPerPair": 6.613,
+  "datasetHash": "b5425a72a8ab8fa0c4364be574b8cc9e1f03d042b3f88b2b5b0abc50c44f36ef",
+  "latencyMsPerPair": 0.09,
   "ablationTest": {
     "coverage": {
       "samples": 32,
@@ -91,6 +91,39 @@
       "samples": 32,
       "accuracy": 0.875,
       "macroF1": 0.641,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    }
+  },
+  "scorerVersion": "cv-evidence-v4",
+  "inputAblation": {
+    "cvOnly": {
+      "samples": 32,
+      "accuracy": 0.9375,
+      "macroF1": 0.8756,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    },
+    "profileOnly": {
+      "samples": 32,
+      "accuracy": 0.75,
+      "macroF1": 0.2857,
+      "precisionAt5": 0.4,
+      "recallAt5": 1.0,
+      "ndcgAt5": 1.0,
+      "rankingQueryCount": 4,
+      "qualityClaim": "synthetic-only"
+    },
+    "combined": {
+      "samples": 32,
+      "accuracy": 0.9375,
+      "macroF1": 0.8756,
       "precisionAt5": 0.4,
       "recallAt5": 1.0,
       "ndcgAt5": 1.0,

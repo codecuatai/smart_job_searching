@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import passwordPdfs from './fixtures/pdf-password-variants.json';
 
 const password = 'E2E-test-12345';
+const aiMethod = process.env.E2E_AI_MODE === 'offline' ? /^test-fixture:/ : /^gemini:/;
 const unique = () => randomUUID().slice(0, 8);
 
 function pdf(text: string) {
@@ -251,7 +252,7 @@ test('complete recruitment workflow across two users with immutable CV and sched
     const planResponse = await liveAIAction(student,info,'/api/skill-gap','Tạo lộ trình AI');
     expect(planResponse.status()).toBe(200);
     const plan = await planResponse.json();
-    expect(plan.method).toMatch(/^gemini:/);
+  expect(plan.method).toMatch(aiMethod);
     expect(plan.roadmap.length).toBeGreaterThan(0);
     expect(plan.projectedScore).toBeUndefined();
     await expect(student.getByText('Match Sau 2 tuần', { exact: true })).toHaveCount(0);
@@ -276,6 +277,7 @@ test('complete recruitment workflow across two users with immutable CV and sched
     await expect(student.getByRole('heading', { name: '0 kỹ năng cần bổ sung', exact: true })).toBeVisible();
 
     await recruiter.reload();
+    if (info.project.name === 'mobile') await recruiter.getByRole('button', {name:'Tìm kiếm & bộ lọc', exact:true}).click();
     await recruiter.getByRole('textbox', { name: 'Tìm ứng viên', exact: true }).fill(`absent-${unique()}`);
     await expect(recruiter.locator('.candidate-result')).toHaveCount(0);
     await recruiter.getByRole('button', { name: 'Xóa tất cả bộ lọc', exact: true }).click();
@@ -349,7 +351,7 @@ test('interview feedback and history survive reload', async ({ page }, info) => 
   expect(generatedResponse.status()).toBe(200);
   const questions = await generatedResponse.json();
   expect(questions).toHaveLength(3);
-  expect(questions.every((q: { method: string }) => q.method.startsWith('gemini:'))).toBe(true);
+  expect(questions.every((q: { method: string }) => aiMethod.test(q.method))).toBe(true);
   await expect(page.getByRole('heading', { name: questions[0].question, exact: true })).toBeVisible();
   await page.getByLabel('Câu trả lời của bạn', { exact: true }).fill('Use idempotency key with a unique database constraint and transaction. Add a concurrency test and retry test to verify duplicate requests create one order.');
   const response = await liveAIAction(page,info,'/api/interview/evaluate','Phân tích câu trả lời');
@@ -357,7 +359,7 @@ test('interview feedback and history survive reload', async ({ page }, info) => 
   const assessment = await response.json();
   expect(assessment.score).toBeGreaterThanOrEqual(0);
   expect(assessment.score).toBeLessThanOrEqual(100);
-  expect(assessment.method).toMatch(/^gemini:/);
+  expect(assessment.method).toMatch(aiMethod);
   expect(assessment.question).toBe(questions[0].question);
   await info.attach('gemini-interview', { body: JSON.stringify({ questions, assessment }, null, 2), contentType: 'application/json' });
   await expect(page.getByRole('heading', { name: /Kết quả rubric: \d+\/100/ })).toBeVisible();
@@ -382,7 +384,7 @@ test('Gemini CV extraction, editable confirmation and matching explanation persi
   const response=await analyzed;
   expect(response.status()).toBe(200);
   const extraction=(await response.json()).analysis;
-  expect(extraction.method).toBe('gemini:gemini-3.5-flash-lite');
+  expect(extraction.method).toMatch(aiMethod);
   expect(extraction.skills.some((s:{name:string}) => s.name==='Python')).toBe(true);
   expect(extraction.skills.some((s:{name:string}) => s.name==='Java')).toBe(false);
   await page.getByLabel('Kỹ năng xác nhận từ CV',{exact:true}).fill('Python, SQL, Docker');

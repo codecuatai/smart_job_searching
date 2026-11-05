@@ -58,13 +58,13 @@ export default function RecruiterPostJobPage() {
         <section className="job-form-section"><div className="job-section-heading"><span className="job-section-number">02</span><div><h2>Tiêu chí ứng viên</h2><p>Cho biết năng lực nào quan trọng nhất với vị trí này.</p></div></div>
           <div className="job-form-grid"><label className="job-field"><span>Kỹ năng bắt buộc</span><input value={mustHave} onChange={e=>setMustHave(e.target.value)} placeholder="Python, SQL" maxLength={1000}/><small>Phân tách bằng dấu phẩy; để trống nếu chưa phân loại.</small></label><label className="job-field"><span>Kỹ năng ưu tiên</span><input value={niceToHave} onChange={e=>setNiceToHave(e.target.value)} placeholder="Docker, Kubernetes" maxLength={1000}/></label></div>
           <label className="job-field"><span>Kỹ năng và yêu cầu <b>*</b></span><textarea rows={5} value={requirements} onChange={event => setRequirements(event.target.value)} placeholder={'Mỗi yêu cầu một dòng\nVí dụ: Thành thạo SQL'} required /><small>Mỗi dòng sẽ được hiển thị như một tiêu chí riêng.</small></label>
-          <div className="job-ast-section"><div className="job-ast-heading"><div className="job-ast-icon"><ShieldCheck size={17} /></div><div><h3>Đánh giá mã nguồn AST</h3><p>Thêm một tiêu chí minh bạch cho hồ sơ có dự án cá nhân.</p></div><span className="job-optional-tag">Tùy chọn</span></div>
+          <details className="job-ast-section"><summary>Ghi chú dự án & tiêu chí tham khảo (chưa thẩm định tự động)</summary><div className="job-ast-heading"><div><h3>Ghi chú cho hồ sơ có dự án</h3><p>Các ngưỡng này chỉ là ghi chú, không tham gia chấm điểm.</p></div></div>
             <div className="job-form-grid job-ast-grid">
               <label className="job-field"><span>Điểm Clean Code tối thiểu <small>(0–100)</small></span><span className="job-score-input"><input type="number" min={50} max={100} value={astThreshold} onChange={event => setAstThreshold(Number(event.target.value))} /><b>/ 100</b></span><small>Gợi ý: đặt từ 80 điểm để cân bằng chất lượng và số lượng hồ sơ.</small></label>
               <label className="job-field"><span>Đồ án có thể thay thế kinh nghiệm</span><input type="text" value={projectSubNote} onChange={event => setProjectSubNote(event.target.value)} placeholder="Mô tả đồ án được chấp nhận" /><small>Giúp sinh viên hiểu rõ cách chứng minh năng lực.</small></label>
             </div>
             <div className="job-ast-rule"><Check size={14} /><span>Ngưỡng {astThreshold} được lưu để tham khảo. Chưa có dịch vụ thẩm định AST.</span></div>
-          </div>
+          </details>
         </section>
         {error && <p role="alert" className="form-error">{error}</p>}<footer className="job-form-actions"><Link href="/recruiter/candidates">Hủy</Link><button type="submit" disabled={busy}>{busy ? 'Đang đăng…' : 'Đăng tin tuyển dụng'} <ArrowRight size={16} /></button></footer>
       </form>

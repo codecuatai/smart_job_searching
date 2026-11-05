@@ -43,13 +43,13 @@ def generate():
             for job in jobs:
                 label=profile['level'] if profile['family']==job['family'] and profile['level']<3 else 0
                 out.append(dict(id=profile['candidateId']+'__'+job['id'],candidateId=profile['candidateId'],job=job,
-                                profileText=profile['profileText'],label=label,split=split,
+                                profileText='',resumeText=profile['profileText'],label=label,split=split,
                                 annotationSource='synthetic-family-rule',gold=False))
     return out
 
 
 def idf_fit(rows):
-    docs={r['candidateId']:r['profileText'] for r in rows}
+    docs={r['candidateId']:r.get('resumeText','')+' '+r['profileText'] for r in rows}
     docs.update({r['job']['id']:' '.join(r['job']['tags'])+' '+r['job']['description'] for r in rows})
     counts=Counter(word for text in docs.values() for word in set(re.findall(r'[a-z0-9+#.]{2,}',engine.normalize(text))))
     return {word:round(math.log((1+len(docs))/(1+count))+1,6) for word,count in sorted(counts.items())}
@@ -57,7 +57,7 @@ def idf_fit(rows):
 
 def train(rows,idf):
     names=['coverage','cosineSimilarity','mustHaveCoverage','experienceFit']
-    vectors=[[1]+[engine.feature_values(r['profileText'],r['job'],idf)[n] for n in names] for r in rows]
+    vectors=[[1]+[engine.feature_values(r['profileText'],r['job'],idf,r.get('resumeText',''))[n] for n in names] for r in rows]
     weights=[0.]*(len(names)+1)
     for _ in range(2000):
         gradient=[0.]*len(weights)
@@ -74,7 +74,7 @@ def metrics(rows,model):
     original=engine.MATCHING_MODEL
     engine.MATCHING_MODEL=model
     try:
-        scores=[engine.match(r['profileText'],r['job'])['matchScore'] for r in rows]
+        scores=[engine.match(r['profileText'],r['job'],r.get('resumeText',''))['matchScore'] for r in rows]
     finally:
         engine.MATCHING_MODEL=original
     predicted=[2 if s>=75 else 1 if s>=35 else 0 for s in scores]
@@ -137,6 +137,11 @@ def main():
     metrics(groups['test'],baseline)
     report['latencyMsPerPair']=round(1000*(time.perf_counter()-started)/len(groups['test']),3)
     report['ablationTest']={feature:metrics(groups['test'],dict(candidate,weights={k:v for k,v in candidate['weights'].items() if k!=feature})) for feature in candidate['weights']}
+    report['scorerVersion']=engine.SCORER_VERSION
+    report['inputAblation']={
+        'cvOnly':metrics([dict(r,profileText='') for r in groups['test']],baseline),
+        'profileOnly':metrics([dict(r,profileText=r.get('resumeText',''),resumeText='') for r in groups['test']],baseline),
+        'combined':metrics([dict(r,profileText=r.get('resumeText','')) for r in groups['test']],baseline)}
     report['limitations']=['Synthetic family rules are not independent human relevance judgments.',
         'Only four relevant candidate queries in each synthetic held-out split; ranking estimates are unstable.',
         'Precision@5 divides by 5 even when the synthetic held-out pool contains only four jobs.',
@@ -146,7 +151,7 @@ def main():
     for name,model in [('baseline-v2',baseline),('candidate-v3',candidate)]:
         engine.MATCHING_MODEL=model
         for row in groups['test']:
-            score=engine.match(row['profileText'],row['job'])['matchScore']
+            score=engine.match(row['profileText'],row['job'],row.get('resumeText',''))['matchScore']
             predicted=2 if score>=75 else 1 if score>=35 else 0
             if predicted!=row['label']: errors.append(dict(model=name,pairId=row['id'],expected=row['label'],predicted=predicted,score=score))
     engine.MATCHING_MODEL=previous

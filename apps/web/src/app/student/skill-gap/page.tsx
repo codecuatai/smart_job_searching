@@ -15,6 +15,7 @@ import DataState from '@/components/DataState';
 import { SkillGapDiagnosis, Job } from '@/types';
 import { useToast } from '@/context/ToastContext';
 import { api } from '@/lib/api';
+import JobSelector from '@/components/JobSelector';
 
 export default function SkillGapPage() {
   const { showToast } = useToast();
@@ -60,7 +61,7 @@ export default function SkillGapPage() {
   if (!gapData || error) return <DataState error={error} retry={reload} />;
   return (
     <div className="space-y-6">
-      <label className="live-field">Vị trí mục tiêu<select value={target} onChange={e => { setTarget(e.target.value); setCompletedTasks({}); }}><option value="">Vị trí phù hợp nhất</option>{jobs.data?.map(job => <option value={job.id} key={job.id}>{job.title}</option>)}</select></label>
+      <JobSelector label="Vị trí mục tiêu" jobs={jobs.data || []} value={target} onChange={value => {setTarget(value); setCompletedTasks({});}} disabled={busy} />
       <label className="live-field">Giờ học mỗi tuần<select value={hours} onChange={e => setHours(Number(e.target.value))} disabled={busy}>{[3, 6, 10, 15, 20].map(n => <option value={n} key={n}>{n} giờ/tuần</option>)}</select></label>
       <button type="button" className="live-primary" onClick={generate} disabled={busy}>{busy ? 'Gemini đang tạo lộ trình…' : gapData.planId ? 'Mở lộ trình AI đã lưu' : 'Tạo lộ trình AI'}</button>
       {actionError && <p className="form-error" role="alert">{actionError}</p>}

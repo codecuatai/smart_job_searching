@@ -2,7 +2,7 @@
 import json
 from typing import Literal
 from pydantic import BaseModel, Field
-from .gemini import generate_json, settings
+from .gemini import generate_json, generation_method
 
 
 class Step(BaseModel):
@@ -42,7 +42,7 @@ def generate_plan(context, missing_skills, hours_per_week):
     weeks = [step.week for step in result.roadmap]
     if len(set(weeks)) != len(weeks) or weeks != sorted(weeks):
         raise ValueError('Các tuần của lộ trình phải theo thứ tự và không trùng.')
-    return dict(**result.model_dump(), method=f'gemini:{settings()["model"]}')
+    return dict(**result.model_dump(), method=generation_method())
 
 
 def generate_questions(context):
@@ -56,4 +56,4 @@ def generate_questions(context):
     ))
     if {q.topic for q in result.questions} != {'api', 'database', 'project'}:
         raise ValueError('Bộ câu hỏi cần đủ ba chủ đề.')
-    return dict(questions=[q.model_dump() for q in result.questions], method=f'gemini:{settings()["model"]}')
+    return dict(questions=[q.model_dump() for q in result.questions], method=generation_method())

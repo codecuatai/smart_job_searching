@@ -13,7 +13,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     const detail = body.detail;
-    throw new Error(typeof detail === 'string' ? detail : Array.isArray(detail)
+    throw new Error(typeof detail === 'string' ? detail : detail?.message ? `${detail.message}${detail.requestId ? ` (Mã: ${detail.requestId})` : ''}` : Array.isArray(detail)
       ? detail.map((item: { msg: string }) => item.msg).join('; ')
       : `Yêu cầu thất bại (${response.status}). Kiểm tra backend và AI.`);
   }

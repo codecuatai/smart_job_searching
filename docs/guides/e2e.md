@@ -1,6 +1,6 @@
 # Kiểm thử E2E bằng trình duyệt trên Docker
 
-Bộ kiểm thử dùng **Playwright Test**, trình duyệt Chromium/Edge thật, frontend production trong Docker và hai dịch vụ API/AI thật. Không mock API hoặc thay dữ liệu trả về bằng fixture. CV thử nghiệm được tạo trong bộ nhớ, có lớp văn bản PDF; không đọc hoặc upload CV/video cá nhân.
+Bộ kiểm thử dùng **Playwright Test**, trình duyệt Chromium/Edge thật, frontend production trong Docker và các dịch vụ API/AI, database, OCR và BI thật. Mặc định `docker:test` dùng provider sinh nội dung xác định trong AI service, ghi method `test-fixture:offline-v1`, không gọi Gemini. Chế độ live dùng Gemini thật. CV thử nghiệm được tạo trong bộ nhớ; không đọc hoặc upload CV/video cá nhân.
 
 ## Chạy lại
 
@@ -10,7 +10,11 @@ Tại thư mục gốc, cách khuyến nghị là chạy toàn bộ E2E trong Do
 npm run docker:test
 ```
 
-`docker:test` build và khởi động web/API/AI/warehouse/Metabase/ETL trong project `unitalent-test` và volume riêng, chờ healthcheck rồi chạy Playwright với `E2E_BASE_URL=http://web:3100`. Web test :3100, BI test :3101, dữ liệu app chính :3000 giữ nguyên. Cần key Gemini thật cho các ca live AI. Không cần Python/dependencies/browser trên host.
+`docker:test` build và khởi động web/API/AI/warehouse/Metabase/ETL trong project `unitalent-test` và volume riêng, chờ healthcheck rồi chạy Playwright với `E2E_BASE_URL=http://web:3100`. Web test :3100, BI test :3101, dữ liệu app chính :3000 giữ nguyên. Không cần Python/dependencies/browser trên host. Test reset đúng volume test trước mỗi lần chạy và tự dừng container/network trong `finally`, kể cả khi thất bại.
+
+Live AI trên PowerShell: `$env:E2E_AI_MODE='live'; npm run docker:test`. Sau đó `Remove-Item Env:E2E_AI_MODE` để về mặc định. Linux/macOS: `E2E_AI_MODE=live npm run docker:test`. Live yêu cầu `GEMINI_API_KEY`; không đổi expected 200 thành 503 để làm test pass. Offline pass không chứng minh provider live khả dụng.
+
+Fixture chỉ bật với `APP_ENV=test` và `AI_TEST_FIXTURES=true`; service từ chối khởi động nếu bật fixture ngoài môi trường test. Không thêm hai biến này vào `.env` dùng ứng dụng bình thường. CI luôn chạy offline; live chạy thêm khi có secret và giữ báo cáo offline riêng.
 
 Lệnh test tự sinh báo cáo HTML/JSON vào `artifacts/e2e/`. Nếu máy đã cài dependencies của `apps/web`, có thể mở report tương tác bằng `npm run test:e2e:report`.
 

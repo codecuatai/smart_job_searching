@@ -46,6 +46,7 @@ export default function RecruiterCandidatesPage() {
   const [minMatch, updateMinMatch] = useState('0');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'match' | 'recent'>('match');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [page, setPage] = useState(1);
   const setQuery=(value:string)=>{updateQuery(value);setPage(1);};
   const setRole=(value:RoleFilter)=>{updateRole(value);setPage(1);};
@@ -83,14 +84,14 @@ export default function RecruiterCandidatesPage() {
 
     <section className="recruiter-stats" aria-label="Tổng quan ứng viên">
       <div><span>Đơn ứng tuyển phù hợp</span><strong>{data?.total || 0}</strong><small>theo bộ lọc hiện tại</small></div>
-      <div><span>Thẩm định mã nguồn</span><strong>—</strong><small>Chưa triển khai dịch vụ AST</small></div>
+      <div><span>Đã lên lịch phỏng vấn</span><strong>{submissions.filter(s => s.stage === 'interview').length}</strong><small>Trong các đơn thuộc tin của bạn</small></div>
       <div><span>CV trên máy chủ</span><strong>{submissions.length}</strong><small>tệp có thể tải xuống</small></div>
       <div className="recruiter-stats-note"><span>Gợi ý hôm nay</span><p>Ưu tiên hồ sơ có dự án sát với vị trí đang tuyển.</p></div>
     </section>
 
     {isLoaded && submissions.length > 0 && <section className="received-resumes recruiter-inbox" aria-labelledby="received-resumes-heading">
       <div className="received-resumes-heading"><div><h2 id="received-resumes-heading">CV mới nhận</h2><p>CV được đính kèm vào các đơn ứng tuyển tin của bạn</p></div><span>{submissions.length} CV</span></div>
-      {submissions.map(application => <article className="received-resume-row" key={application.id}>
+      {submissions.slice(0, 5).map(application => <article className="received-resume-row" key={application.id}>
         <div className="received-resume-avatar"><Image src={application.applicantAvatarUrl || '/avatars/default-student.svg'} alt={`Ảnh đại diện của ${application.applicantName}`} width={34} height={34} /></div>
         <div className="received-resume-main"><strong>{application.applicantName}</strong><span>{application.jobTitle} · {application.company}</span></div>
         <div className="received-resume-file"><FileText size={15} /><span>{application.resumeName}</span></div>
@@ -101,7 +102,7 @@ export default function RecruiterCandidatesPage() {
 
     <section className="candidate-worklist" aria-labelledby="candidate-list-heading">
       <div className="candidate-worklist-heading">
-        <div><div className="recruiter-eyebrow"><SlidersHorizontal size={13} /> Bộ lọc ứng viên</div><h2 id="candidate-list-heading">Danh sách ứng viên</h2><p>{candidates.length} kết quả phù hợp với bộ lọc</p></div>
+        <div><h2 id="candidate-list-heading">Danh sách ứng viên</h2><p>{data?.total || 0} kết quả · {candidates.length} hồ sơ trên trang này</p></div>
         <label className="candidate-sort">Sắp xếp
           <select value={sortBy} onChange={event => setSortBy(event.target.value as 'match' | 'recent')} aria-label="Sắp xếp ứng viên">
             <option value="match">Độ phù hợp cao nhất</option><option value="recent">Ứng tuyển gần đây</option>
@@ -109,7 +110,8 @@ export default function RecruiterCandidatesPage() {
         </label>
       </div>
 
-      <div className="candidate-filters">
+      <button type="button" className="candidate-mobile-filter" aria-expanded={filtersOpen} aria-controls="candidate-filters" onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={16} /> Tìm kiếm & bộ lọc</button>
+      <div id="candidate-filters" className={`candidate-filters ${filtersOpen ? 'is-open' : ''}`}>
         <label className="candidate-search"><Search size={17} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tên, trường, kỹ năng hoặc dự án" aria-label="Tìm ứng viên" />{query && <button type="button" onClick={() => setQuery('')} aria-label="Xóa nội dung tìm kiếm"><X size={14} /></button>}</label>
         <label className="candidate-select"><span>Vị trí</span><select value={role} onChange={event => setRole(event.target.value as RoleFilter)}><option value="all">Tất cả vị trí</option><option value="backend">Backend</option><option value="data">Data & BI</option><option value="frontend">Frontend</option><option value="devops">Cloud & DevOps</option></select><ChevronDown size={14} /></label>
         <label className="candidate-select"><span>Trạng thái</span><select value={stage} onChange={event => setStage(event.target.value as StageFilter)}><option value="all">Tất cả trạng thái</option><option value="submitted">Mới ứng tuyển</option><option value="reviewing">Đang xem xét</option><option value="interview">Phỏng vấn</option><option value="offered">Đã gửi offer</option></select><ChevronDown size={14} /></label>
@@ -130,7 +132,7 @@ export default function RecruiterCandidatesPage() {
             <div className="candidate-result-project"><span>DỰ ÁN NỔI BẬT</span><strong>{candidate.featuredProject.title}</strong></div>
             <div className="candidate-tech-tags">{candidate.featuredProject.techStack.slice(0, 4).map(skill => <span key={skill}>{skill}</span>)}</div>
           </div>
-          <div className="candidate-result-scores"><div className="candidate-match-score"><strong>{candidate.matchScore}<small>%</small></strong><span>phù hợp</span></div><div><strong>—</strong><span>AST code</span></div><div><strong>—</strong><span>phỏng vấn AI</span></div></div>
+          <div className="candidate-result-scores"><div className="candidate-match-score"><strong>{candidate.matchScore}<small>%</small></strong><span>Điểm khi ứng tuyển</span></div></div>
           <div className="candidate-result-actions"><Link href={`/recruiter/candidates/${candidate.id}`}>Xem hồ sơ <ArrowRight size={14} /></Link><Link href={`/recruiter/candidates/${candidate.id}`}><CalendarDays size={14} /> Lên lịch phỏng vấn</Link></div>
         </article>) : <div className="candidate-empty"><div><Search size={21} /></div><h3>Chưa có hồ sơ phù hợp</h3><p>Thử đổi từ khóa hoặc nới lỏng một vài tiêu chí lọc.</p><button type="button" onClick={clearFilters}>Xóa tất cả bộ lọc</button></div>}
       </div>

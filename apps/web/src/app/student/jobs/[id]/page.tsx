@@ -12,12 +12,13 @@ import {
   Stethoscope,
   Mic,
   Layers,
-  ShieldCheck,
   Building2
 } from 'lucide-react';
 import { useResource } from '@/lib/useResource';
 import DataState from '@/components/DataState';
 import { Job } from '@/types';
+import { ScoreSummary } from '@/components/WorkspaceUI';
+import { jobDate, jobSalary } from '@/lib/jobPresentation';
 import ApplyWithResumeButton from '@/components/ApplyWithResumeButton';
 
 export default function JobDetailPage() {
@@ -65,10 +66,10 @@ export default function JobDetailPage() {
                   <MapPin className="w-3.5 h-3.5 mr-1 text-slate-400" /> {job.location}
                 </span>
                 <span>•</span>
-                <span className="font-semibold text-emerald-700">{job.salary}</span>
+                <span className="font-semibold text-emerald-700">{jobSalary(job.salary)}</span>
                 <span>•</span>
                 <span className="flex items-center text-slate-400">
-                  <Clock className="w-3.5 h-3.5 mr-1" /> Đăng {job.postedAt}
+                  <Clock className="w-3.5 h-3.5 mr-1" /> Đăng {jobDate(job.postedAt)}
                 </span>
               </div>
             </div>
@@ -78,7 +79,7 @@ export default function JobDetailPage() {
           <div className="flex flex-col sm:flex-row md:flex-col items-stretch sm:items-center md:items-end gap-3 min-w-[220px]">
             <div className="bg-blue-50/70 border border-blue-200 p-3 rounded-xl text-center md:text-right w-full">
               <span className="text-xs text-blue-700 font-semibold block">Độ phù hợp kỹ năng & văn bản</span>
-              <span className="text-2xl font-bold text-blue-900">{job.matchScore}%</span>
+              <ScoreSummary score={job.matchScore} provisional={job.scoreStatus==='insufficient-cv'}/>
               <span className="text-[11px] text-slate-500 block mt-0.5">{job.explanation || 'Chưa xác minh năng lực hoặc mã nguồn.'}</span>
             </div>
 
@@ -153,6 +154,10 @@ export default function JobDetailPage() {
           <section className="bg-white p-5 rounded-2xl border border-slate-200 space-y-3" aria-label="Giải thích matching">
             <h2 className="font-bold">Cách tính độ phù hợp</h2>
             <p className="text-sm text-slate-600">{job.scoreMeaning} Model: {job.modelVersion}.</p>
+            <p>{job.explanation}</p>
+            <div className="score-calculation"><span>Điểm mô hình ban đầu: {job.rawScore ?? job.matchScore}/100</span>{job.adjustments?.map(a => <p key={a.code}>{a.reason} <strong>{a.before} → {a.after}</strong></p>)}<strong>Điểm cuối: {job.finalScore ?? job.matchScore}/100</strong></div>
+            {!!job.unknownRequirements?.length && <p className="data-notice">Yêu cầu chưa đối chiếu được: {job.unknownRequirements.join(', ')}</p>}
+            {job.sourceUrl && <a href={job.sourceUrl} target="_blank" rel="noreferrer">Xem tin gốc tại {job.source || 'nguồn tuyển dụng'} ↗</a>}
             <p className="text-sm">Kỹ năng khớp: {job.matchedSkills?.join(', ') || 'Chưa nhận diện được'}</p>
             {!!job.missingMustHaveSkills?.length && <p className="text-sm">Thiếu bắt buộc: {job.missingMustHaveSkills.join(', ')}</p>}
             <details><summary className="cursor-pointer text-sm font-semibold">Xem hệ số và bằng chứng</summary>
@@ -161,28 +166,6 @@ export default function JobDetailPage() {
               {job.evidence?.map(e => <blockquote className="text-sm border-l-2 pl-2 my-2 break-words" key={e.skill}><strong>{e.skill}</strong>: {e.quote}</blockquote>)}
             </details>
           </section>
-          {/* AST Audit Quality Target */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 space-y-3.5">
-            <div className="flex items-center space-x-2 text-xs font-semibold text-slate-700">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>Ngưỡng AST tham khảo (chưa thẩm định)</span>
-            </div>
-            <div className="p-3 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-600">Ngưỡng Clean Code:</span>
-                <span className="font-bold text-emerald-800">&gt;= {'—'}/100</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-600">Ngưỡng Đạo văn (Plagiarism):</span>
-                <span className="font-bold text-emerald-800">&lt; 5.0%</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-600">Nguyên lý SOLID:</span>
-                <span className="font-bold text-emerald-800">Đạt chuẩn Module hóa</span>
-              </div>
-            </div>
-          </div>
-
           {/* Missing Skills Warning */}
           {job.missingSkills && job.missingSkills.length > 0 && (
             <div className="bg-amber-50/50 border border-amber-200 p-5 rounded-2xl space-y-3">
@@ -191,7 +174,7 @@ export default function JobDetailPage() {
                 <span>Kỹ năng bạn còn thiếu so với JD này</span>
               </div>
               <p className="text-xs text-amber-800 leading-relaxed">
-                Hệ thống phát hiện bạn còn thiếu một số kỹ năng để đạt 100% Match:
+                Các kỹ năng trong yêu cầu chưa có bằng chứng trong hồ sơ của bạn:
               </p>
               <div className="space-y-1.5">
                 {job.missingSkills.map((skill, idx) => (

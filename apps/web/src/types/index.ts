@@ -26,10 +26,18 @@ export interface Job {
   benefits: string[];
   missingSkills?: string[];
   modelVersion?: string;
+  scorerVersion?: string;
+  rawScore?: number;
+  finalScore?: number;
+  scoreStatus?: 'cv-based' | 'insufficient-cv';
+  adjustments?: {code: string; reason: string; before: number; after: number; delta: number}[];
+  unknownRequirements?: string[];
+  sourceUrl?: string;
+  source?: string;
   scoreMeaning?: string;
   scoreFactors?: { feature: string; value: number; weight: number; contribution: number }[];
   missingMustHaveSkills?: string[];
-  evidence?: { skill: string; quote: string }[];
+  evidence?: { skill: string; quote: string; source?: string }[];
 }
 
 export interface Candidate {

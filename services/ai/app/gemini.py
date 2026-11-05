@@ -2,8 +2,8 @@
 
 The deterministic matcher remains local so a job list can be ranked without
 one network request per job. Gemini is used for generative tasks (currently
-interview feedback and optional skill extraction), with a safe local fallback
-when the key is missing, the model is unavailable, or the response is invalid.
+interview feedback and CV extraction). Generative failures are reported to
+the caller; deterministic fixtures are restricted to explicit test deployments.
 """
 
 from __future__ import annotations
@@ -18,6 +18,17 @@ from typing import Any
 import httpx
 
 GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
+
+
+def fixture_enabled():
+    enabled = os.getenv('AI_TEST_FIXTURES') == 'true'
+    if enabled and os.getenv('APP_ENV') != 'test':
+        raise RuntimeError('AI_TEST_FIXTURES requires APP_ENV=test')
+    return enabled
+
+
+def generation_method():
+    return 'test-fixture:offline-v1' if fixture_enabled() else f'gemini:{settings()["model"]}'
 
 
 def settings() -> dict[str, Any]:
@@ -79,6 +90,9 @@ def generate_text(prompt: str, *, json_mode: bool = False) -> str:
 
 
 def generate_json(prompt: str) -> dict[str, Any]:
+    if fixture_enabled():
+        from .fixture_provider import generate
+        return generate(prompt)
     raw = generate_text(prompt, json_mode=True)
     cleaned = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw.strip(), flags=re.I)
     value = json.loads(cleaned)
@@ -107,7 +121,7 @@ Câu trả lời ứng viên: {answer}
     if not feedback:
         raise ValueError('Gemini thiếu feedback.')
     return {'score': score, 'matchedConcepts': matched, 'suggestedConcepts': suggested,
-            'feedback': feedback, 'method': f'gemini:{settings()["model"]}'}
+            'feedback': feedback, 'method': generation_method()}
 
 
 def extract_skills(text: str) -> list[str]:

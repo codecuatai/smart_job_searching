@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -29,6 +29,28 @@ export default function Navbar({ currentRole }: { currentRole: RoleType }) {
   const { showToast } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
   const [roleOpen, setRoleOpen] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const menuRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previous = document.activeElement as HTMLElement;
+    const menuButton = menuRef.current;
+    const main = document.querySelector('main');
+    main?.setAttribute('inert', '');
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusable = () => [...(sidebarRef.current?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),select') || [])];
+    focusable()[0]?.focus({preventScroll: true});
+    const keydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setMenuOpen(false); return; }
+      if (e.key !== 'Tab') return;
+      const items = focusable(); const first = items[0]; const last = items.at(-1);
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', keydown);
+    return () => { main?.removeAttribute('inert'); document.body.style.overflow = oldOverflow; document.removeEventListener('keydown', keydown); (previous || menuButton)?.focus({preventScroll: true}); };
+  }, [menuOpen]);
   const links = currentRole === 'student' ? studentLinks : recruiterLinks;
   const active = links.find(link => pathname === link.href || pathname.startsWith(`${link.href}/`));
   const name = user?.name || '';
@@ -43,14 +65,15 @@ export default function Navbar({ currentRole }: { currentRole: RoleType }) {
   return (
     <>
       <header className="workspace-topbar">
-        <button className="workspace-menu-button" type="button" aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'} onClick={() => setMenuOpen(!menuOpen)}>
+        <button ref={menuRef} className="workspace-menu-button" type="button" aria-expanded={menuOpen} aria-controls="workspace-navigation" aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'} onClick={() => setMenuOpen(!menuOpen)}>
           {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
         <span className="workspace-topbar-title">{active?.label ?? 'Chi tiết'}</span>
         <div className="workspace-topbar-right"><span className="workspace-live-dot" /> Không gian {currentRole === 'student' ? 'ứng viên' : 'doanh nghiệp'}</div>
       </header>
       {menuOpen && <button className="workspace-scrim" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
-      <aside className={`workspace-sidebar ${menuOpen ? 'is-open' : ''}`}>
+      <aside ref={sidebarRef} id="workspace-navigation" className={`workspace-sidebar ${menuOpen ? 'is-open' : ''}`}>
+        {menuOpen && <button type="button" className="drawer-close" onClick={() => setMenuOpen(false)}>Đóng điều hướng <X size={18} /></button>}
         <Link className="workspace-brand" href={currentRole === 'student' ? '/student/jobs' : '/recruiter/candidates'} onClick={() => setMenuOpen(false)}>
           <span className="workspace-mark" aria-hidden="true"><span /><span /><span /></span>
           <span><strong>UniTalent<span className="workspace-brand-ai">AI</span></strong><small>Career workspace</small></span>

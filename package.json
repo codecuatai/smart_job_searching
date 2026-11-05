@@ -19,6 +19,7 @@
     "ai:benchmark": "python scripts/benchmark_matching.py",
     "db:backup": "node scripts/database.mjs backup",
     "db:restore": "node scripts/database.mjs restore",
+    "db:verify-recovery": "node scripts/verify-recovery.mjs",
     "bi:refresh": "node scripts/database.mjs refresh",
     "bi:verify": "node scripts/database.mjs verify",
     "docker:up": "node scripts/docker.mjs up",

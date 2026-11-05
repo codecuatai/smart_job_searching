@@ -32,6 +32,13 @@ jobs:
       - run: npm ci
         working-directory: apps/web
       - run: npm run env:init
+      - name: Run required offline Docker E2E
+        env:
+          E2E_AI_MODE: offline
+        run: npm run docker:test
+      - name: Preserve offline report
+        if: always()
+        run: test ! -d artifacts/e2e || cp -R artifacts/e2e artifacts/e2e-offline
       - name: Check live Gemini configuration
         id: gemini
         shell: bash
@@ -45,6 +52,8 @@ jobs:
           fi
       - name: Run Docker E2E with live Gemini
         if: steps.gemini.outputs.configured == 'true'
+        env:
+          E2E_AI_MODE: live
         run: npm run docker:test
       - name: Report skipped live AI E2E
         if: steps.gemini.outputs.configured != 'true'
@@ -53,7 +62,9 @@ jobs:
         if: always()
         with:
           name: playwright-e2e-report
-          path: artifacts/e2e/
+          path: |
+            artifacts/e2e/
+            artifacts/e2e-offline/
           include-hidden-files: true
           retention-days: 7
       - run: docker compose -p unitalent-test down

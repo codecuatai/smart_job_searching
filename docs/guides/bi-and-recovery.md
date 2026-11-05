@@ -42,17 +42,20 @@ npm run docker:logs
 npm run docker:test
 ```
 
-Tạo project `unitalent-test`, volume `unitalent-test_api_data`, warehouse riêng; web :3100, BI :3101. Mỗi lần `docker:test` sẽ xóa đúng các volume của project test rồi tạo mới, nên fixture lỗi từ lần trước không quay lại; không đụng `DATA_VOLUME` nghiệp vụ và không xóa CV thật. Dùng khóa Gemini thật trong `.env`; thiếu khóa/lỗi upstream thì test AI thất bại, không đánh dấu pass bằng dữ liệu mẫu. Báo cáo HTML/JSON/ảnh/trace tại `artifacts/e2e`. Có thể đổi `E2E_PROJECT_NAME`, `E2E_WEB_PORT`, `E2E_BI_PORT` để tạo môi trường khác.
+Tạo project `unitalent-test`, volume `unitalent-test_api_data`, warehouse riêng; web :3100, BI :3101. Mỗi lần `docker:test` sẽ xóa đúng các volume của project test rồi tạo mới; không đụng `DATA_VOLUME` nghiệp vụ và không xóa CV thật. Mặc định offline dùng provider fixture cho sinh nội dung, không cần key. Đặt `E2E_AI_MODE=live` để gọi Gemini thật; lỗi upstream làm ca live thất bại. Container/network test tự dọn trong `finally`. Báo cáo tại `artifacts/e2e`. `E2E_PROJECT_NAME` phải là `unitalent-test` hoặc `unitalent-test-<suffix>`; có thể đổi `E2E_WEB_PORT`, `E2E_BI_PORT`.
 
 ## Backup và restore
 
 ```powershell
 npm run db:backup
+npm run db:verify-recovery
 # Chọn đúng backup, lệnh tiếp theo thay dữ liệu nghiệp vụ bằng bản đó:
 npm run db:restore -- var/backups/<timestamp>/unitalent.db
 ```
 
 Backup lưu trong `var/backups/<timestamp>`: SQLite consistent backup và `pg_dump -Fc` của cả hai PostgreSQL databases. Đây là dữ liệu riêng tư, không commit. Restore SQLite dừng web/API/ETL, kiểm tra integrity/schema, lưu bản hiện tại vào volume với hậu tố `.pre-restore`, khôi phục rồi khởi động lại. Worker xây lại mart từ SQLite. Không chạy restore trên dữ liệu đang có thay đổi cần giữ.
+
+`db:verify-recovery` kiểm thử SQLite backup/restore vào hai file tạm (integrity và số bản ghi), dump/restore mart PostgreSQL vào database tạm và đối chiếu counts. Script tự dọn bản sao; không dừng hoặc ghi đè database nghiệp vụ. Chưa thay thế diễn tập khôi phục toàn bộ máy, Metabase metadata và volumes trên host mới.
 
 Khi mất cả volume PostgreSQL: tạo lại warehouse bằng Compose, dừng `bi metabase`, dùng `pg_restore --clean --if-exists -U postgres -d <database>` với file dump tương ứng bên trong container warehouse, sau đó bật lại `metabase bi`. Hai database/roles phải được bootstrap trước; giữ cùng bộ mật khẩu của backup. Khi chỉ mất mart, có thể bỏ qua restore mart và để ETL tái tạo; lịch sử `job_observations` cũ cần dump để phục hồi.
 

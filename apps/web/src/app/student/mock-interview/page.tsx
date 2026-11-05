@@ -3,6 +3,7 @@ import { FormEvent, useState } from 'react';
 import { api } from '@/lib/api';
 import { useResource } from '@/lib/useResource';
 import DataState from '@/components/DataState';
+import JobSelector from '@/components/JobSelector';
 
 interface Question { id: string; question: string; topic?: string; method?: string }
 interface Result { score: number; feedback: string; matchedConcepts: string[]; suggestedConcepts: string[]; method?: string; question?: string }
@@ -39,7 +40,7 @@ export default function InterviewPage() {
     <header><h1>Luyện phỏng vấn kỹ thuật</h1><p>Trả lời bằng văn bản, nhận phản hồi theo rubric và xem lại lịch sử.</p></header>
     <p className="data-notice">Gemini tạo câu hỏi theo kỹ năng, dự án và vị trí mục tiêu, đồng thời phân tích câu trả lời. Điểm dùng cho luyện tập. {question?.method?.startsWith('gemini:') ? `Bộ câu hỏi: ${question.method.replace('gemini:', '')}.` : 'Đang hiển thị bộ câu hỏi tham khảo; bấm nút bên dưới để tạo câu hỏi AI cá nhân hóa.'}</p>
     <section className="live-panel">
-      <label className="live-field">Vị trí phỏng vấn<select value={target} onChange={e => setTarget(e.target.value)} disabled={generating || busy}><option value="">Vị trí phù hợp nhất</option>{jobs.data?.map(job => <option key={job.id} value={job.id}>{job.title}</option>)}</select></label>
+      <JobSelector label="Vị trí phỏng vấn" jobs={jobs.data || []} value={target} onChange={setTarget} disabled={generating || busy} />
       <button type="button" className="live-primary" onClick={generate} disabled={generating || busy}>{generating ? 'Gemini đang tạo câu hỏi…' : 'Tạo bộ câu hỏi AI'}</button>
     </section>
     <form className="live-panel live-form" onSubmit={submit}>

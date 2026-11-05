@@ -28,6 +28,12 @@ Client phải giữ cookie giữa các request. Qua trình duyệt, mutation c�
 
 ## Hồ sơ và việc làm
 
+Cập nhật 05/11: `GET /api/jobs/search` nhận thêm `location` (substring), `workType` (`all`, `Full-time`, `Part-time`, `Internship`), `minScore` (0–100); áp dụng cùng `q`, `category`, `page`, `pageSize`.
+
+Job list/detail và prediction snapshot dùng chung `cv-evidence-v4`. Thêm `rawScore`, `finalScore`, `scorerVersion`, `scoreStatus` (`cv-based`/`insufficient-cv`), `adjustments[{code,reason,before,after,delta}]`, `cvMatchedSkills`, `profileOnlySkills`, `unknownRequirements`. Tổng delta giải thích chênh lệch raw/final. `/100` là ranking score. CV xác nhận gửi structured analysis riêng cùng raw text.
+
+Lỗi sinh nội dung trả HTTP 503 và `detail: {code,message,retryable,requestId}`: `ai-not-configured`, `provider-configuration`, `provider-quota`, `provider-timeout`, `provider-invalid-output`, `provider-unavailable`. Không trả URL upstream/key/prompt. Retry Gemini tối đa một lần trong deadline; API không retry lồng; proxy 90s, API tối thiểu 70s, provider mặc định 60s.
+
 | Method | Path | Quyền | Nội dung |
 | --- | --- | --- | --- |
 | GET | `/api/profile` | student | Hồ sơ dạng Candidate, kèm `profile` với trường chỉnh sửa |

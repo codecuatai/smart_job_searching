@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
+import './workspace.css';
 import { ToastProvider } from '@/context/ToastContext';
 import { ResumeProvider } from '@/context/ResumeContext';
 import { AuthProvider } from '@/context/AuthContext';

@@ -62,7 +62,17 @@ Mở [localhost:3000](http://127.0.0.1:3000) với `WEB_PORT=3000`, [Metabase](h
 npm run docker:down
 ```
 
-Người trong team clone repository chỉ cần Docker Desktop và Node.js: `npm run env:init`, điền key Gemini, `npm run docker:up`. Lệnh up build ứng dụng/BI và chờ healthcheck. `npm run docker:test` chạy Playwright trên project/volume riêng (:3100/:3101), báo cáo tại `artifacts/e2e/`, giữ nguyên dữ liệu nghiệp vụ. Dừng stack chính bằng `npm run docker:down`, stack test bằng `docker compose -p unitalent-test down`.
+Người trong team clone repository chỉ cần Docker Desktop và Node.js: `npm run env:init`, điền key Gemini, `npm run docker:up`. Lệnh up build ứng dụng/BI và chờ healthcheck. `npm run docker:test` mặc định chạy offline E2E trên project/volume riêng (:3100/:3101), không cần key; tác vụ sinh nội dung dùng provider fixture được ghi rõ `test-fixture:offline-v1`. Auth, database, PDF/OCR, matching và BI vẫn chạy thật. Stack test tự dừng sau khi chạy, báo cáo tại `artifacts/e2e/`, giữ nguyên dữ liệu nghiệp vụ.
+
+Để kiểm chứng Gemini thật (cần key và hạn mức):
+
+```powershell
+$env:E2E_AI_MODE='live'
+npm run docker:test
+Remove-Item Env:E2E_AI_MODE
+```
+
+Linux/macOS: `E2E_AI_MODE=live npm run docker:test`. CI luôn chạy offline E2E; live E2E chạy thêm khi có secret `GEMINI_API_KEY`. Dừng stack chính bằng `npm run docker:down`. Xem [báo cáo triển khai 05/11](docs/reports/release-implementation-2026-11-05.md) để biết phạm vi đã kiểm chứng và phần còn thiếu.
 
 Lệnh dừng giữ dữ liệu. Không xóa volume khi cần giữ tài khoản/CV. Bản `.env` trên máy hiện tại đang tham chiếu volume cũ ở chế độ external để bảo toàn dữ liệu sau đổi tên thư mục/service; clone mới dùng volume `unitalent_data`.
 

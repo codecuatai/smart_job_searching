@@ -11,6 +11,8 @@
 - [Crawl job công khai](guides/job-crawler.md).
 - [Trạng thái triển khai](guides/implementation-status.md).
 - [Kế hoạch hoàn thiện 5 checklist TH3](plans/th3-completion-roadmap.md): backlog, phụ thuộc, tiêu chí nghiệm thu và mốc bàn giao AI/BI.
+- [Audit 05/11 và kế hoạch nghiệm thu/refactor UI](plans/th3-release-and-ui-refactor.md): lỗi matching tái hiện được, kết quả chạy lại, ưu tiên P0/P1 và thiết kế từng màn hình.
+- [Triển khai và kiểm chứng 05/11](reports/release-implementation-2026-11-05.md): thay đổi CV-first/UI/CI, kết quả offline/live và điều kiện nghiệm thu còn thiếu.
 - [Triển khai/sao lưu](guides/deployment.md) · [Git/media](guides/git-and-media.md).
 - [Kiểm thử](guides/testing.md) · [E2E](guides/e2e.md) · [Kết quả kiểm tra](guides/verification.md).
 - [Báo cáo model](reports/model-evaluation.md) · [Báo cáo BI](reports/bi-evaluation.md).
