@@ -17,7 +17,9 @@ def unavailable(error):
     elif isinstance(error, httpx.HTTPStatusError):
         status = error.response.status_code
         if status == 429:
-            code, message = 'provider-quota', 'Gemini đang giới hạn lượt gọi hoặc hết hạn mức. Vui lòng thử lại sau.'
+            code, message = 'provider-quota', 'Gemini trả 429: đã đạt giới hạn lượt gọi hoặc quota. Kiểm tra hạn mức của project trong Google AI Studio.'
+        elif status == 503:
+            message = 'Gemini trả 503: model đang quá tải hoặc tạm không khả dụng. Đã thử lại có giãn cách nhưng chưa thành công; vui lòng thử sau.'
         elif status in (400, 401, 403, 404):
             code, message, retryable = 'provider-configuration', 'Gemini từ chối cấu hình key/model. Kiểm tra cấu hình dịch vụ.', False
     elif isinstance(error, (ValueError, ValidationError)):

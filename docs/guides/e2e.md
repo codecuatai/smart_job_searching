@@ -40,9 +40,9 @@ Trên Windows sau khi cài Chromium, đặt `$env:PLAYWRIGHT_CHANNEL='chromium'`
 
 Nếu kiểm thử server khác, đặt `E2E_BASE_URL` trong `.env` gốc; nếu bỏ trống, runner suy ra từ WEB_PORT. Chỉ trỏ tới môi trường thử nghiệm vì suite tạo tài khoản, tin và đơn ứng tuyển thật. Mỗi lần chạy dùng ID/email duy nhất, không phụ thuộc dữ liệu của lần trước. Chưa có API xóa tài khoản; dữ liệu tên `E2E ...`/email `@example.test` thuộc dữ liệu synthetic. Không chạy bộ test này vào production.
 
-## Phạm vi 28 ca
+## Phạm vi 30 ca
 
-Chạy 14 kịch bản trên **desktop 1440×900** và **mobile 390×844**. Ngoài các ca bên dưới, có Gemini CV extraction + chỉnh/xác nhận + giải thích matching; PDF raster qua OCR thật; 6 Metabase SQL questions thực thi thành công.
+Chạy 15 kịch bản trên **desktop 1440×900** và **mobile 390×844**. Ngoài các ca bên dưới, có Gemini CV extraction + chỉnh/xác nhận + giải thích matching; PDF raster qua OCR thật; 6 Metabase SQL questions thực thi thành công. Riêng ca kiểm tra giao diện khi phỏng vấn lỗi chủ động trả HTTP 503 bằng Playwright route cho hai thao tác tạo/chấm để kiểm chứng error placement và giữ draft; ca này không chứng minh Gemini live hoạt động. Các ca thành công vẫn kiểm tra status 200 và method của đúng provider/mode.
 
 | Kịch bản | Những điều được kiểm chứng |
 | --- | --- |
@@ -52,6 +52,7 @@ Chạy 14 kịch bản trên **desktop 1440×900** và **mobile 390×844**. Ngo�
 | Validation và bộ lọc | Trùng email, mật khẩu sai, GPA sai, student không đọc analytics; lọc ngành, tìm kiếm không có kết quả và xóa bộ lọc |
 | Tuyển dụng toàn trình | Hai tài khoản độc lập; đăng tin; chặn thiếu CV/trùng; skill gap đổi khi thay CV; Gemini tạo lộ trình theo 6 giờ học/tuần, checklist lưu sau reload và không có projectedScore giả; bộ lọc ứng viên; CV snapshot SHA-256; lịch hẹn; phân quyền; BI và CSV |
 | Phỏng vấn | Gemini tạo ba câu hỏi theo hồ sơ/job; kiểm tra provider, chấm đúng câu đã lưu, điểm/feedback và lịch sử sau reload; đổi đúng câu hỏi theo chủ đề |
+| Lỗi phỏng vấn | Chặn câu trả lời trắng bằng thông báo tiếng Việt, không gửi request; lỗi tạo bộ mới ở bước tạo, lỗi chấm ở bước trả lời; giữ câu hỏi/draft và không thêm lịch sử khi thất bại |
 
 Các trang chính còn được kiểm tra không tràn ngang ở viewport tương ứng. Đây là kiểm thử Chromium/Edge, chưa phải chứng nhận tương thích Safari/Firefox hoặc kiểm toán accessibility đầy đủ.
 

@@ -1,6 +1,10 @@
 # AI — Ghép việc có giải thích, chạy cục bộ
 
-Python + FastAPI. Matching mặc định `hybrid-v2` là bộ phân loại logistic nhỏ được huấn luyện từ fixture đánh giá trong repository; các tác vụ sinh nội dung dùng Gemini `gemini-3.5-flash-lite` khi có `GEMINI_API_KEY`, và fallback về xử lý local nếu không khả dụng.
+Python + FastAPI. Matching mặc định `hybrid-v2` cùng policy `cv-evidence-v4` chạy cục bộ. Các tác vụ sinh CV/lộ trình/câu hỏi cá nhân hóa dùng Gemini `gemini-3.5-flash-lite` với `GEMINI_API_KEY`; khi không khả dụng trả lỗi rõ, không thay bằng mẫu tĩnh. Chỉ skills và chấm ngân hàng câu hỏi tham khảo cũ có fallback local được ghi nhãn.
+
+Client tái sử dụng kết nối, retry tối đa 6 lần cho lỗi tạm thời trong ngân sách tổng mặc định 60s. Backoff 1/2/4/8/16s cộng jitter; tôn trọng `Retry-After`/Google `RetryInfo`. 429 không có hint chờ ít nhất 30s; không retry sai key/model 400/401/403/404. Không in URL có key, prompt hoặc response body vào log. Retry không thể tự mở quota/billing hoặc bảo đảm provider luôn có capacity.
+
+`GEMINI_FALLBACK_MODEL` cho phép dùng model Gemini dự phòng khi model chính quá tải/timeout; để trống để tắt. Mặc định cấu hình team là `gemini-3.1-flash-lite`, được bật sau khi người dùng đồng ý. Chuyển sau hai lỗi tạm thời hoặc một timeout, giới hạn từng lần 20s và tối đa 6 lần tổng cộng trong 60s. Không chuyển vì quota/sai key/model. Metadata `method` được gắn với chính kết quả thành công, không lưu bằng biến toàn cục và không tin nội dung LLM tự nhận model.
 
 ```powershell
 # Tại gốc repository, sau npm run setup

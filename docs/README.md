@@ -17,6 +17,8 @@
 - [Kiểm thử](guides/testing.md) · [E2E](guides/e2e.md) · [Kết quả kiểm tra](guides/verification.md).
 - [Báo cáo model](reports/model-evaluation.md) · [Báo cáo BI](reports/bi-evaluation.md).
 - [Lộ trình học và phỏng vấn Gemini](reports/gemini-coaching.md): cách tạo, lưu tiến độ và kiểm chứng provider AI.
+- [Luồng luyện phỏng vấn và xử lý lỗi](guides/interview-flow.md): tạo câu hỏi, chấm câu trả lời, giữ draft và phân biệt offline/live.
+- [Nguyên nhân và sửa lỗi Gemini quá tải](reports/gemini-reliability-2026-11-05.md): xác minh tên model/key, retry có giới hạn, model dự phòng thật và kiểm chứng trên app chính.
 
 Tài liệu thành phần: [web](../apps/web/README.md), [API](../services/api/README.md), [AI](../services/ai/README.md), [công cụ nghiên cứu](../scripts/research/README.md).
 

@@ -58,7 +58,7 @@ Seed có sẵn 3 ứng viên, avatar nội bộ, CV PDF minh họa, đơn ứng 
 npm run docker:test
 ```
 
-Lệnh này build/khởi động project test riêng (:3100/:3101), chờ healthcheck rồi chạy Playwright trên network Docker (`E2E_BASE_URL=http://web:3100`). Mặc định offline, không cần key; sinh nội dung AI dùng fixture có nhãn test. Đặt `E2E_AI_MODE=live` để gọi Gemini thật. Bộ hiện tại gồm 28 ca trên desktop và mobile; stack test tự dừng khi hoàn tất. Chi tiết tại [E2E](e2e.md). Kết quả được ghi tại:
+Lệnh này build/khởi động project test riêng (:3100/:3101), chờ healthcheck rồi chạy Playwright trên network Docker (`E2E_BASE_URL=http://web:3100`). Mặc định offline, không cần key; sinh nội dung AI dùng fixture có nhãn test. Đặt `E2E_AI_MODE=live` để gọi Gemini thật. Bộ hiện tại gồm 30 ca trên desktop và mobile; stack test tự dừng khi hoàn tất. Chi tiết tại [E2E](e2e.md). Kết quả được ghi tại:
 
 - `artifacts/e2e/results.json` — kết quả máy đọc được.
 - `artifacts/e2e/report/` — báo cáo HTML.

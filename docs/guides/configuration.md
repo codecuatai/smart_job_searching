@@ -25,8 +25,9 @@ Lệnh tạo `.env` nếu thiếu và không ghi đè cấu hình đang có. Gi�
 | DATA_VOLUME_EXTERNAL | false | true khi giữ lại một volume đã tồn tại, Compose không sở hữu/xóa volume này |
 | GEMINI_API_KEY | trống | API key Gemini từ Google AI Studio; chỉ đặt trong `.env`, không commit |
 | GEMINI_MODEL | gemini-3.5-flash-lite | Model Gemini dùng cho tác vụ sinh nội dung |
-| GEMINI_ENABLED | true | Bật Gemini; khi false hoặc thiếu key, AI dùng fallback local |
-| GEMINI_TIMEOUT_SECONDS | 60 | Timeout mỗi request Gemini (tăng cho prompt CV/OCR dài) |
+| GEMINI_FALLBACK_MODEL | gemini-3.1-flash-lite | Model dự phòng; để trống để tắt. Chỉ chuyển khi model chính lỗi tạm thời; kết quả ghi model thực tế |
+| GEMINI_ENABLED | true | Bật Gemini; thiếu key/tắt Gemini làm tác vụ sinh CV/lộ trình/câu hỏi cá nhân hóa trả lỗi cấu hình |
+| GEMINI_TIMEOUT_SECONDS | 60 | Ngân sách tổng một tác vụ Gemini, gồm các lần retry và backoff |
 
 Biến tùy chọn, chỉ thêm vào cùng `.env` khi cần:
 
@@ -69,7 +70,9 @@ Trên máy đang tái cấu trúc, DATA_VOLUME được giữ là `unitalent-e2e
 
 Mật khẩu seed không được cập nhật ngược vào tài khoản đã có. Nút demo trên giao diện dùng mật khẩu mặc định; nếu đổi DEMO_PASSWORD, đăng nhập bằng form với mật khẩu thực của tài khoản.
 
-Gemini tạo lộ trình theo hồ sơ/job/giờ học, sinh câu hỏi phỏng vấn và đánh giá đúng câu hỏi đã lưu; endpoint trích xuất kỹ năng cũng hỗ trợ Gemini. Matching hàng loạt vẫn dùng hybrid-v2 local. Lộ trình và câu hỏi cá nhân hóa không fallback mẫu tĩnh khi Gemini lỗi: API trả 503 để người dùng thử lại. Chỉ endpoint skills và chấm bộ câu hỏi tham khảo cũ giữ fallback local với nhãn method tương ứng. API chờ ít nhất 35 giây hoặc `GEMINI_TIMEOUT_SECONDS + 10` giây để dịch vụ AI có thời gian trả lỗi.
+Gemini tạo lộ trình theo hồ sơ/job/giờ học, sinh câu hỏi phỏng vấn và đánh giá đúng câu hỏi đã lưu; endpoint trích xuất kỹ năng cũng hỗ trợ Gemini. Matching hàng loạt vẫn dùng hybrid-v2 local. Lộ trình và câu hỏi cá nhân hóa không fallback mẫu tĩnh khi Gemini lỗi: API trả 503 để người dùng thử lại. Chỉ endpoint skills và chấm bộ câu hỏi tham khảo cũ giữ fallback local với nhãn method tương ứng. API chờ ít nhất 70 giây hoặc `GEMINI_TIMEOUT_SECONDS + 10` giây để dịch vụ AI có thời gian trả lỗi. Trong ngân sách mặc định 60s, Gemini thử tối đa 6 lần với backoff/jitter và tôn trọng cooldown từ provider; key/model không hợp lệ không được retry. Proxy web hiện 90s; nếu tăng ngân sách vượt mặc định, cần đồng bộ timeout các tầng.
+
+Khi cấu hình model dự phòng, client chuyển sau hai lỗi tạm thời của model chính hoặc một timeout. Mỗi lần gọi giới hạn tối đa 20s để còn ngân sách cho dự phòng; tối đa 6 lần gọi **tổng cộng**, không phải 6 lần cho từng model. Không chuyển model vì 400/401/403/404/429; vẫn báo lỗi cấu hình/quota để xử lý đúng. `method` có dạng `gemini:<model thực tế>` cho phân tích CV, lộ trình, tạo/chấm phỏng vấn. Healthcheck hiển thị model chính/dự phòng đã cấu hình, không gọi LLM để chứng minh availability. Chi phí của model dự phòng có thể khác model chính.
 
 ## Git
 

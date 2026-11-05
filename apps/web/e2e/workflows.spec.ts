@@ -65,8 +65,9 @@ async function noHorizontalOverflow(page: Page) {
 }
 
 async function liveAIAction(page:Page,info:TestInfo,path:string,button:string){
-  for(let attempt=0;attempt<3;attempt++){
-    const pending=page.waitForResponse(r=>r.url().endsWith(path)&&r.request().method()==='POST',{timeout:60000});
+  if (process.env.E2E_AI_MODE !== 'offline') test.setTimeout(300000);
+  for(let attempt=0;attempt<2;attempt++){
+    const pending=page.waitForResponse(r=>r.url().endsWith(path)&&r.request().method()==='POST',{timeout:80000});
     await page.getByRole('button',{name:button,exact:true}).click();
     const response=await pending;
     if(response.status()!==503||attempt===1)return response;
@@ -375,11 +376,48 @@ test('interview feedback and history survive reload', async ({ page }, info) => 
   await expect(page.getByRole('heading', { name: databaseQuestion.question, exact: true })).toBeVisible();
 });
 
+test('interview validation and injected provider outages keep errors in the correct step and retain draft', async ({page},info) => {
+  await register(page,'student',`E2E Interview Outage ${unique()}`);
+  await page.goto('/student/mock-interview');
+  const generator = page.getByRole('region',{name:'1. Chuẩn bị bộ câu hỏi',exact:true});
+  const form = page.getByRole('form',{name:'Trả lời phỏng vấn',exact:true});
+  const input = page.getByLabel('Câu trả lời của bạn',{exact:true});
+  const originalQuestion = await form.locator('h2').last().innerText();
+  let evaluationRequests = 0;
+  page.on('request',request => { if(request.method()==='POST' && request.url().endsWith('/api/interview/evaluate')) evaluationRequests++; });
+  await input.fill('   ');
+  await form.getByRole('button',{name:'Phân tích câu trả lời',exact:true}).click();
+  await expect(form.getByRole('alert')).toHaveText('Vui lòng nhập câu trả lời trước khi phân tích.');
+  await expect(input).toBeFocused();
+  expect(evaluationRequests).toBe(0);
+  const draft = 'Use an idempotency key and unique constraint. Test concurrent requests and retries.';
+  await input.fill(draft);
+  await expect(form.getByRole('alert')).toHaveCount(0);
+  // Explicit fault injection tests UI failure handling, not Gemini availability.
+  const outage = (requestId:string) => JSON.stringify({detail:{code:'provider-unavailable',message:'Gemini đang bận.',retryable:true,requestId}});
+  await page.route('**/api/interview/questions',route => route.request().method()==='POST'
+    ? route.fulfill({status:503,contentType:'application/json',body:outage('e2e-generate-outage')}) : route.continue());
+  await generator.getByRole('button',{name:'Tạo bộ câu hỏi AI',exact:true}).click();
+  await expect(generator.getByRole('alert')).toContainText('e2e-generate-outage');
+  await expect(form.getByRole('alert')).toHaveCount(0);
+  await expect(form.locator('h2').last()).toHaveText(originalQuestion);
+  await expect(input).toHaveValue(draft);
+  await page.route('**/api/interview/evaluate',route => route.fulfill({status:503,contentType:'application/json',body:outage('e2e-evaluate-outage')}));
+  await form.getByRole('button',{name:'Phân tích câu trả lời',exact:true}).click();
+  await expect(form.getByRole('alert')).toContainText('e2e-evaluate-outage');
+  await expect(generator.getByRole('alert')).not.toContainText('e2e-evaluate-outage');
+  await expect(input).toHaveValue(draft);
+  expect(evaluationRequests).toBe(1);
+  await expect(page.getByText('Chưa có câu trả lời nào được lưu.',{exact:true})).toBeVisible();
+  await noHorizontalOverflow(page);
+  await evidence(page,info,'interview-failure-steps');
+});
+
 test('Gemini CV extraction, editable confirmation and matching explanation persist', async ({page},info) => {
   await register(page,'student',`E2E Analysis ${unique()}`);
   await page.getByLabel('Chọn CV dạng PDF',{exact:true}).setInputFiles({name:'analysis.pdf',mimeType:'application/pdf',buffer:pdf('Built Python SQL API projects. I do not know Java. 2 years experience.')});
   await expect(page.locator('.cv-analysis-panel')).toBeVisible();
-  const analyzed=page.waitForResponse(r => r.url().includes('/analyze') && r.request().method()==='POST',{timeout:60000});
+  const analyzed=page.waitForResponse(r => r.url().includes('/analyze') && r.request().method()==='POST',{timeout:80000});
   await page.getByRole('button',{name:'Phân tích CV bằng AI',exact:true}).click();
   const response=await analyzed;
   expect(response.status()).toBe(200);

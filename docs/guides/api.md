@@ -32,7 +32,9 @@ Cập nhật 05/11: `GET /api/jobs/search` nhận thêm `location` (substring), 
 
 Job list/detail và prediction snapshot dùng chung `cv-evidence-v4`. Thêm `rawScore`, `finalScore`, `scorerVersion`, `scoreStatus` (`cv-based`/`insufficient-cv`), `adjustments[{code,reason,before,after,delta}]`, `cvMatchedSkills`, `profileOnlySkills`, `unknownRequirements`. Tổng delta giải thích chênh lệch raw/final. `/100` là ranking score. CV xác nhận gửi structured analysis riêng cùng raw text.
 
-Lỗi sinh nội dung trả HTTP 503 và `detail: {code,message,retryable,requestId}`: `ai-not-configured`, `provider-configuration`, `provider-quota`, `provider-timeout`, `provider-invalid-output`, `provider-unavailable`. Không trả URL upstream/key/prompt. Retry Gemini tối đa một lần trong deadline; API không retry lồng; proxy 90s, API tối thiểu 70s, provider mặc định 60s.
+Lỗi sinh nội dung trả HTTP 503 và `detail: {code,message,retryable,requestId}`: `ai-not-configured`, `provider-configuration`, `provider-quota`, `provider-timeout`, `provider-invalid-output`, `provider-unavailable`. Thông báo phân biệt upstream 429 (rate limit/quota) và 503 (quá tải/tạm không khả dụng). Không trả URL upstream/key/prompt. Gemini tối đa 6 lần gọi trong deadline tổng mặc định 60s, exponential backoff 1/2/4/8/16s + jitter, tôn trọng `Retry-After`/`google.rpc.RetryInfo`; 429 không có gợi ý chờ ít nhất 30s. Không retry 400/401/403/404 hoặc bỏ qua thời gian chờ khi deadline không đủ. API không retry lồng; proxy 90s, API tối thiểu 70s.
+
+`GEMINI_FALLBACK_MODEL` bật dự phòng thật trong cùng tổng ngân sách: sau hai lỗi tạm thời hoặc một timeout của model chính; mỗi lần gọi tối đa 20s khi có dự phòng. Không chuyển vì lỗi key/model/quota. Trường `method` của kết quả CV/lộ trình/câu hỏi/phản hồi là model thực tế xử lý, có thể khác `GEMINI_MODEL` chính. Thông tin model do client ghi từ request thành công, không tin trường model tự khai trong JSON của LLM.
 
 | Method | Path | Quyền | Nội dung |
 | --- | --- | --- | --- |
