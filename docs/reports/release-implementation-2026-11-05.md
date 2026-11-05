@@ -14,6 +14,7 @@ Triển khai từ baseline `99323c3`, theo [kế hoạch/audit](../plans/th3-rel
 - Lỗi Gemini phân loại configuration/quota/timeout/invalid output/unavailable; log code/requestId an toàn, retry hữu hạn. Proxy 90s/API tối thiểu 70s/provider mặc định 60s. Không retry lồng ở API.
 - Offline Docker E2E luôn chạy trong CI, không cần key. Chỉ tác vụ sinh nội dung dùng provider `test-fixture:offline-v1` khi `APP_ENV=test`; auth/SQLite/matching/OCR/PostgreSQL/Metabase chạy thật. Live Gemini riêng khi có key. Fixture ngoài test làm service từ chối startup. Giữ báo cáo offline riêng khi CI chạy tiếp live.
 - Test reset đúng volume project `unitalent-test`, timeout cài npm 300s, cleanup container/network trong finally. Main volume giữ nguyên. Thêm `npm run db:verify-recovery` kiểm tra SQLite và mart restore trên bản sao.
+- Tạo thư mục bind-mount báo cáo bằng host user trước Docker để runner Linux có quyền sao chép báo cáo offline. Lần push đầu `24b16c1` chạy 28/28 E2E trên GitHub nhưng bước preserve report lỗi quyền; đã sửa script tạo thư mục.
 - Benchmark truyền CV riêng, thêm input ablation CV/profile/combined; legacy train/evaluate map fixture text thành CV. Không deploy candidate v3 do validation kém hơn baseline.
 
 ## Kiểm chứng
@@ -30,6 +31,7 @@ Triển khai từ baseline `99323c3`, theo [kế hoạch/audit](../plans/th3-rel
 | Search 640 jobs | 12 request tuần tự localhost/Docker Desktop Windows; p50 80ms, p95 theo nearest-rank 1657ms (cold/cache miss); 11 warm 72–111ms; chưa phải load/concurrency benchmark |
 | Matching synthetic | 576 mẫu, baseline test macro-F1 0,8756; candidate 0,3077 bị từ chối. Gold labels = 0; không suy ra model chính xác thực tế |
 | Live Gemini HTTP | `/resume/analyze` 200, method `gemini:gemini-3.5-flash-lite`, ~5s; `/roadmap` và `/interview/questions` 503 provider-unavailable sau retry, ~3–3,5s. Không đổi expected status để coi pass |
+| E2E xác nhận khi push 05/11 | Offline local 28/28 (73s), GitHub 28/28 (46,6s); live local 22/28 (211s), 6 lỗi HTTP 503 ở roadmap, tạo/chấm phỏng vấn và phân tích CV text/scan. Không có ca skipped; artifact tách tại `artifacts/verification-2026-11-05/offline` và `live` |
 
 Artifact local: `artifacts/e2e/results.json`, `artifacts/e2e/report`, `artifacts/release-2026-11-05/ui-audit.json` và ảnh cùng thư mục. Không commit ảnh có dữ liệu CV. Landing inspector có các nhận xét art direction theo app mode (shadow/title/icon) không phù hợp để kết luận lỗi landing; không dùng exit code đó để tuyên bố UI pass toàn bộ. Source lint của ba phần refactor chính không có findings. Chưa audit đầy đủ keyboard/contrast/zoom 200% trên mọi tương tác.
 

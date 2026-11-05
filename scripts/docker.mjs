@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { config, ensureRootEnv } from './lib/env.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -51,6 +53,9 @@ if (command === 'test') {
   if (dockerEnv.E2E_AI_MODE === 'live' && !dockerEnv.GEMINI_API_KEY) throw new Error('Live E2E requires GEMINI_API_KEY.');
   if (dockerEnv.E2E_AI_MODE === 'offline') dockerEnv.GEMINI_API_KEY = '';
   delete dockerEnv.API_URL; delete dockerEnv.AI_SERVICE_URL; delete dockerEnv.ALLOWED_ORIGINS;
+  // Create the bind-mount source as the host user. If Docker creates it on
+  // Linux, artifacts/ belongs to root and CI cannot preserve the offline report.
+  mkdirSync(join(root, 'artifacts', 'e2e'), { recursive: true });
   // The test project is disposable by design. Reset only its own app,
   // warehouse and Metabase volumes so failed E2E fixtures cannot pollute the
   // next run; the production compose project/volume is untouched.
