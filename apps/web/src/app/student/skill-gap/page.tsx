@@ -61,6 +61,7 @@ export default function SkillGapPage() {
   if (!gapData || error) return <DataState error={error} retry={reload} />;
   return (
     <div className="space-y-6">
+      <Link href="/student/cv-review" className="live-secondary">Phân tích bằng chứng & đề xuất Outline CV →</Link>
       <JobSelector label="Vị trí mục tiêu" jobs={jobs.data || []} value={target} onChange={value => {setTarget(value); setCompletedTasks({});}} disabled={busy} />
       <label className="live-field">Giờ học mỗi tuần<select value={hours} onChange={e => setHours(Number(e.target.value))} disabled={busy}>{[3, 6, 10, 15, 20].map(n => <option value={n} key={n}>{n} giờ/tuần</option>)}</select></label>
       <button type="button" className="live-primary" onClick={generate} disabled={busy}>{busy ? 'Gemini đang tạo lộ trình…' : gapData.planId ? 'Mở lộ trình AI đã lưu' : 'Tạo lộ trình AI'}</button>
@@ -94,7 +95,7 @@ export default function SkillGapPage() {
           <div className="bg-white border border-slate-200 px-4 py-2 rounded-xl flex items-center space-x-4">
             <div>
               <span className="text-[11px] text-slate-400 block font-medium">Match Hiện tại</span>
-              <span className="text-lg font-bold text-amber-700">{gapData.currentScore}%</span>
+              <span className="text-lg font-bold text-amber-700">{gapData.currentScore}/100</span>
             </div>
           </div>
         </div>

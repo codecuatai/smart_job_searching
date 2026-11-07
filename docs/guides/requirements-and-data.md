@@ -1,5 +1,9 @@
 # Yêu cầu và dữ liệu TH3
 
+**Bổ sung 06/11/2026 — schema v5:** thêm ca tư vấn CV–JD với snapshot đầu vào, Outline,
+BI và lịch sử chỉnh sửa; hai bảng `cv_consultations`, `cv_consultation_revisions`.
+Các bảng nghiệp vụ v4 giữ nguyên. [Hướng dẫn/API tư vấn CV](cv-review.md).
+
 Ngày cập nhật: 04/11/2026. Đây là đặc tả bản triển khai, không phải cam kết độ chính xác tuyển dụng.
 
 | Yêu cầu | Luồng/API | Bằng chứng tự động |

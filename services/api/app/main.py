@@ -24,6 +24,7 @@ from .schemas import CoachingRequest, ProgressRequest
 from .schemas import AnalysisConfirmation
 from .data_quality import parse_salary, classify_origin, canonical_skills
 from .resume_analysis import local_analysis, verify_analysis, ocr_pdf
+from .consultations import router as consultation_router
 
 student_only = require_role('student')
 recruiter_only = require_role('recruiter')
@@ -40,6 +41,7 @@ async def lifespan(_app):
 
 
 app = FastAPI(title='UniTalent API', version='1.0.0', lifespan=lifespan)
+app.include_router(consultation_router)
 
 
 @app.middleware('http')

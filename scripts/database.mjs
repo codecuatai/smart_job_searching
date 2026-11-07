@@ -27,7 +27,7 @@ if(command==='backup'){
   if(bytes.subarray(0,16).toString()!=='SQLite format 3\0')throw new Error('Not a SQLite backup.');
   // Stop all OLTP writers/readers. Keep a consistent pre-restore backup on the volume.
   docker(['stop','web','bi','api']);
-  const code="import sys,sqlite3; from pathlib import Path; from services.config import database_path; p=Path('/tmp/restore.db'); p.write_bytes(sys.stdin.buffer.read()); source=sqlite3.connect(p); assert source.execute('PRAGMA integrity_check').fetchone()[0]=='ok'; assert source.execute('SELECT MAX(version) FROM schema_version').fetchone()[0]<=4; target=sqlite3.connect(database_path()); previous=sqlite3.connect(str(database_path())+'.pre-restore'); target.backup(previous); previous.close(); source.backup(target); target.close(); source.close(); print('SQLite restored; previous database saved as .pre-restore')";
+  const code="import sys,sqlite3; from pathlib import Path; from services.config import database_path; from services.api.app.db import SCHEMA_VERSION; p=Path('/tmp/restore.db'); p.write_bytes(sys.stdin.buffer.read()); source=sqlite3.connect(p); assert source.execute('PRAGMA integrity_check').fetchone()[0]=='ok'; assert source.execute('SELECT MAX(version) FROM schema_version').fetchone()[0]<=SCHEMA_VERSION; target=sqlite3.connect(database_path()); previous=sqlite3.connect(str(database_path())+'.pre-restore'); target.backup(previous); previous.close(); source.backup(target); target.close(); source.close(); print('SQLite restored; previous database saved as .pre-restore')";
   const output=docker(['run','--rm','-T','--no-deps','api','python','-c',code],{input:bytes});
   console.log(output.toString());
   docker(['up','-d','--wait','--wait-timeout','360','api','web','bi']);

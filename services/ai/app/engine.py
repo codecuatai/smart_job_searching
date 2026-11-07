@@ -50,6 +50,17 @@ SKILLS = {
     'Software Architecture': ['software architecture'], 'Microservices': ['microservices'],
     'Communication': ['communication', 'giao tiep'], 'Team Management': ['team management'],
     'Data Visualization': ['data visualization', 'truc quan hoa du lieu'],
+    # Frequently used requirements in Vietnamese JDs. These aliases turn
+    # natural-language requirements into concrete, reviewable skill gaps.
+    'Object-Oriented Programming': ['object oriented programming', 'object-oriented programming', 'lap trinh huong doi tuong', 'oop'],
+    'Spring Data JPA': ['spring data jpa', 'data jpa'], 'Spring Security': ['spring security'],
+    'JWT': ['jwt', 'json web token'], 'RabbitMQ': ['rabbitmq'],
+    'Bash': ['bash script', 'bash scripting', 'bash'], 'Shell Scripting': ['shell script', 'shell scripting'],
+    'Clean Code': ['clean code'], 'Problem Solving': ['problem solving', 'giai quyet van de'],
+    'Teamwork': ['teamwork', 'team work', 'lam viec nhom', 'phoi hop lam viec'],
+    'Learning Agility': ['ham hoc hoi', 'learning agility', 'willingness to learn'],
+    'Web Performance': ['web performance', 'web performance optimization'],
+    'Responsive Design': ['responsive design'], 'State Management': ['state management'],
 }
 
 

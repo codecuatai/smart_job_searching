@@ -16,12 +16,16 @@ const sqlite = docker(['api', 'python', '-c', `
 import json, sqlite3, tempfile
 from pathlib import Path
 from services.config import database_path
+from services.api.app.db import SCHEMA_VERSION
 with tempfile.TemporaryDirectory(prefix='recovery-verify-') as folder:
     source = sqlite3.connect(database_path())
     backup = sqlite3.connect(Path(folder) / 'backup.db')
     source.backup(backup)
     source.close()
-    expected = {t: backup.execute('SELECT COUNT(*) FROM "' + t + '"').fetchone()[0] for t in ('users','jobs','applications','resumes')}
+    version = backup.execute('SELECT MAX(version) FROM schema_version').fetchone()[0]
+    assert version <= SCHEMA_VERSION
+    tables = ('users','jobs','applications','resumes','cv_consultations','cv_consultation_revisions')
+    expected = {t: backup.execute('SELECT COUNT(*) FROM "' + t + '"').fetchone()[0] for t in tables if backup.execute("SELECT name FROM sqlite_master WHERE name=?",(t,)).fetchone()}
     restored = sqlite3.connect(Path(folder) / 'restored.db')
     restored.execute('CREATE TABLE disposable_marker (id INTEGER)')
     backup.backup(restored)
@@ -30,7 +34,7 @@ with tempfile.TemporaryDirectory(prefix='recovery-verify-') as folder:
     actual = {t: restored.execute('SELECT COUNT(*) FROM "' + t + '"').fetchone()[0] for t in expected}
     assert expected == actual
     restored.close(); backup.close()
-    print(json.dumps(dict(sqlite='passed', restoredCounts=actual)))
+    print(json.dumps(dict(sqlite='passed', schemaVersion=version, restoredCounts=actual)))
 `]);
 console.log(sqlite.toString().trim());
 

@@ -166,4 +166,7 @@
   .candidate-filters:not(.is-open) { display: none; }
   .candidate-result-actions a { min-height: 44px; display: inline-flex; align-items: center; }
 }
+.job-consult-button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 14px; border: 1px solid var(--ui-line); border-radius: 6px; background: white; color: var(--ui-accent); font-size: 13px; text-decoration: none; }
+.job-consult-button:hover { background: var(--ui-ground); }
+@media (max-width: 600px) { .job-consult-button { min-height: 44px; } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

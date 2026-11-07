@@ -112,6 +112,7 @@ Seed tạo sẵn 3 hồ sơ ứng viên, CV PDF minh họa, đơn ứng tuyển 
 - Nhà tuyển dụng đăng tin; sinh viên sửa học vấn/kỹ năng/dự án, tải CV PDF tối đa 5 MB/30 trang, tìm việc và ứng tuyển.
 - Chặn đơn trùng, giữ đúng bản CV đã nộp; nhà tuyển dụng chỉ xem hồ sơ thuộc tin của mình, cập nhật trạng thái/lịch.
 - AI đối chiếu kỹ năng + cosine văn bản, giải thích kỹ năng thiếu, sinh lộ trình; luyện phỏng vấn văn bản và lưu lịch sử.
+- Tư vấn CV theo JD: chọn phiên bản CV/JD riêng, lưu snapshot, đối chiếu bằng chứng, Outline Gemini có thể sửa, BI nhu cầu kỹ năng, xuất Markdown và kịch bản/checklist video. [Hướng dẫn](docs/guides/cv-review.md).
 - BI tổng hợp dữ liệu trong SQLite hiện tại, không khẳng định số liệu thị trường thực.
 
 AI dùng matching hybrid-v2 local cho ranking hàng loạt; Gemini `gemini-3.5-flash-lite` tạo lộ trình học theo hồ sơ/job/giờ học, sinh và chấm câu hỏi phỏng vấn, hỗ trợ endpoint trích xuất CV có evidence. CV scan được OCR tối đa 3 trang đầu bằng Poppler/Tesseract; người dùng kiểm tra và xác nhận extraction trước khi dùng làm matching. Lộ trình/câu hỏi/phân tích AI báo lỗi rõ để thử lại nếu thiếu key hoặc Gemini lỗi. AST/đạo văn, xác minh commit GitHub, voice STT/TTS và email tự động chưa triển khai. Xem [trạng thái triển khai](docs/guides/implementation-status.md).

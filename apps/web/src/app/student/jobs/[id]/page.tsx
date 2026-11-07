@@ -89,6 +89,7 @@ export default function JobDetailPage() {
             >
               Nộp hồ sơ ngay
             </ApplyWithResumeButton>
+            <Link href={`/student/cv-review?jobId=${encodeURIComponent(job.id)}`} className="job-consult-button">So sánh job này với CV</Link>
           </div>
         </div>
 
@@ -155,7 +156,6 @@ export default function JobDetailPage() {
             <h2 className="font-bold">Cách tính độ phù hợp</h2>
             <p className="text-sm text-slate-600">{job.scoreMeaning} Model: {job.modelVersion}.</p>
             <p>{job.explanation}</p>
-            <div className="score-calculation"><span>Điểm mô hình ban đầu: {job.rawScore ?? job.matchScore}/100</span>{job.adjustments?.map(a => <p key={a.code}>{a.reason} <strong>{a.before} → {a.after}</strong></p>)}<strong>Điểm cuối: {job.finalScore ?? job.matchScore}/100</strong></div>
             {!!job.unknownRequirements?.length && <p className="data-notice">Yêu cầu chưa đối chiếu được: {job.unknownRequirements.join(', ')}</p>}
             {job.sourceUrl && <a href={job.sourceUrl} target="_blank" rel="noreferrer">Xem tin gốc tại {job.source || 'nguồn tuyển dụng'} ↗</a>}
             <p className="text-sm">Kỹ năng khớp: {job.matchedSkills?.join(', ') || 'Chưa nhận diện được'}</p>

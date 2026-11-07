@@ -12,6 +12,7 @@ import { RoleType } from '@/types';
 const studentLinks = [
   { href: '/student/jobs', label: 'Khám phá việc làm', icon: BriefcaseBusiness },
   { href: '/student/profile', label: 'Hồ sơ năng lực', icon: Code2 },
+  { href: '/student/cv-review', label: 'So sánh CV & việc làm', icon: FileText },
   { href: '/student/applications', label: 'Đơn ứng tuyển', icon: FileText },
   { href: '/student/mock-interview', label: 'Luyện phỏng vấn', icon: Mic2 },
   { href: '/student/skill-gap', label: 'Lộ trình kỹ năng', icon: SearchCheck },

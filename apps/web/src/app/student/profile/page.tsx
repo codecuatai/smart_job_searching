@@ -1,5 +1,6 @@
 'use client';
 import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { api } from '@/lib/api';
@@ -30,7 +31,7 @@ export default function ProfilePage() {
   };
   if (!data || error) return <DataState error={error} retry={reload} />;
   return <div className="live-page">
-    <PageHeader title="Hồ sơ năng lực" description={`${user?.name} · CV là bằng chứng chính để gợi ý việc làm.`} />
+    <PageHeader title="Hồ sơ năng lực" description={`${user?.name} · CV là bằng chứng chính để gợi ý việc làm.`} action={<Link href="/student/cv-review">So sánh từng CV với việc làm →</Link>} />
     <nav className="section-tabs" aria-label="Các phần hồ sơ"><a href="#resume-heading">CV & phân tích</a><a href="#profile-fields">Thông tin bổ sung</a></nav>
     <ResumeManager />
     <form id="profile-fields" className="live-panel live-form" onSubmit={save}>

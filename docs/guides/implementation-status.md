@@ -1,6 +1,6 @@
 # Trạng thái triển khai
 
-Mốc cập nhật: **05/11/2026**. Bản TH3 chạy Docker với ứng dụng, PostgreSQL mart, Metabase và worker ETL. [Yêu cầu/ERD](requirements-and-data.md), [vận hành](bi-and-recovery.md), [benchmark](../../data/evaluation/README.md), [nghiệm thu mới](../reports/release-implementation-2026-11-05.md).
+Mốc cập nhật: **06/11/2026**. Bản TH3 có cấu hình Docker với ứng dụng, PostgreSQL mart, Metabase và worker ETL. [Yêu cầu/ERD](requirements-and-data.md), [vận hành](bi-and-recovery.md), [benchmark](../../data/evaluation/README.md), [nghiệm thu TH3](../reports/release-implementation-2026-11-05.md), [tư vấn CV–JD mới](../reports/cv-review-implementation-2026-11-06.md).
 
 | Chức năng | Hiện trạng |
 | --- | --- |
@@ -16,6 +16,7 @@ Mốc cập nhật: **05/11/2026**. Bản TH3 chạy Docker với ứng dụng, 
 | Phỏng vấn | Gemini sinh bộ câu hỏi theo hồ sơ/job và chấm nguyên câu hỏi đã lưu; lưu lịch sử. Bộ câu hỏi tham khảo vẫn có sẵn, được ghi nhãn rõ |
 | BI | Web filters/CSV, ứng viên duy nhất, lương median theo tháng/currency/period, funnel owner; PostgreSQL ETL + Metabase 6 câu hỏi/dashboard |
 | Phân tích CV / scan | Gemini schema có evidence, sửa/xác nhận, OCR Poppler/Tesseract eng+vie tối đa 3 trang; giữ file khi AI/OCR lỗi |
+| Tư vấn CV theo JD — 06/11 | Chọn CV/JD cụ thể, snapshot bất biến, gap có bằng chứng/phân biệt tự khai báo, Outline Gemini sửa/lưu/revision, BI aggregate real, xuất Markdown, kịch bản và checklist tự xác nhận. [Hướng dẫn](cv-review.md). Video/nộp bài do người học thực hiện |
 | GitHub AST / SOLID / vulnerability scan | Chưa triển khai; không dùng chỉ số mock để xác minh ứng viên |
 | Phát hiện đạo văn / xác minh commit | Chưa triển khai |
 | Quy đổi đồ án thành số năm kinh nghiệm | Ghi chú JD, chưa có mô hình kiểm định |

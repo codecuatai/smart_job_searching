@@ -418,6 +418,6 @@ def test_migration_is_idempotent_and_replaces_stale_profile_skill_index(clients)
     with db() as connection:
         skills=[r[0] for r in connection.execute("SELECT skill_name FROM candidate_skills WHERE user_id=? AND source='profile'",(user['id'],))]
         assert skills == ['SQL']
-        assert connection.execute('SELECT MAX(version) FROM schema_version').fetchone()[0] == 4
+        assert connection.execute('SELECT MAX(version) FROM schema_version').fetchone()[0] == 5
         assert connection.execute('PRAGMA foreign_key_check').fetchall() == []
     assert student.get('/api/resumes/current').json()['id'] == cv['id']

@@ -13,6 +13,12 @@ def test_common_ai_cloud_and_web_skills_are_extracted():
     assert {'Django', 'Node.js', 'C++', 'AWS', 'Power BI', 'PyTorch', 'Vue.js'} <= set(skills)
 
 
+def test_vietnamese_jd_soft_and_framework_requirements_are_concrete_skills():
+    skills = extract_skills('Lập trình hướng đối tượng OOP; Spring Data JPA; JWT; '
+                            'tư duy giải quyết vấn đề và làm việc nhóm; clean code')
+    assert {'Object-Oriented Programming', 'Spring Data JPA', 'JWT', 'Problem Solving', 'Teamwork', 'Clean Code'} <= set(skills)
+
+
 def test_profile_changes_recompute_score_and_explanation():
     job = {'id': '1', 'tags': ['Python', 'SQL', 'Docker'], 'requirements': [], 'description': ''}
     empty = match('', job)

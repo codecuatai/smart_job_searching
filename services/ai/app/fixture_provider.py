@@ -5,6 +5,13 @@ from .engine import extract_skills
 
 
 def generate(prompt):
+    if prompt.startswith('UNITALENT_CV_OUTLINE_V1'):
+        context = json.loads(prompt.split('\nDữ liệu: ', 1)[1])
+        gaps = [g for g in context['gaps'] if g['status'] != 'evidenced']
+        return dict(sections=[dict(title='Dự án liên quan', reason='Ưu tiên bằng chứng phù hợp JD.',
+            sourceIds=[s['id'] for s in context['sources']][:5], gapIds=[g['id'] for g in gaps][:3],
+            advice='Viết rõ vai trò dựa trên kết quả có thật.')],
+            learningActions=[dict(gapId=g['id'], action=f"Thực hành {g['skill']} trong dự án trước khi bổ sung vào CV.") for g in gaps][:5])
     if 'Phân tích văn bản CV' in prompt:
         text = prompt.split('. CV: ', 1)[-1]
         years = re.search(r'(\d+(?:\.\d+)?) years experience', text)

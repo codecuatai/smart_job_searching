@@ -3,6 +3,8 @@ import sqlite3
 from contextlib import contextmanager
 from services.config import database_path
 
+SCHEMA_VERSION = 5
+
 
 @contextmanager
 def db():
@@ -122,10 +124,23 @@ def init_db():
             application_id TEXT PRIMARY KEY REFERENCES applications(id) ON DELETE CASCADE,
             prediction TEXT NOT NULL, resume_analysis TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS cv_consultations (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            resume_id TEXT NOT NULL REFERENCES resumes(id), input_hash TEXT NOT NULL,
+            snapshot TEXT NOT NULL, data TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS cv_consultations_owner ON cv_consultations(user_id,created_at);
+        CREATE TABLE IF NOT EXISTS cv_consultation_revisions (
+            consultation_id TEXT NOT NULL REFERENCES cv_consultations(id) ON DELETE CASCADE,
+            revision INTEGER NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL,
+            PRIMARY KEY(consultation_id,revision)
+        );
         ''')
         c.execute('INSERT OR IGNORE INTO schema_version VALUES (2)')
         c.execute('INSERT OR IGNORE INTO schema_version VALUES (3)')
         c.execute('INSERT OR IGNORE INTO schema_version VALUES (4)')
+        c.execute('INSERT OR IGNORE INTO schema_version VALUES (?)', (SCHEMA_VERSION,))
         _backfill_skill_index(c)
         backfill_metadata(c)
         from .resume_analysis import local_analysis

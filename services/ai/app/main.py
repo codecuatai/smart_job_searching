@@ -63,6 +63,21 @@ class AnswerInput(BaseModel):
     keywords: list[str] = Field(default_factory=list, max_length=10)
 
 
+class OutlineInput(BaseModel):
+    context: dict
+
+
+@app.post('/resume/outline')
+def resume_outline(body: OutlineInput):
+    from .cv_outline import generate_outline
+    try:
+        result = generate_outline(body.context)
+        return dict(outline={k: result[k] for k in ('sections', 'learningActions')},
+                    method=result['method'], promptVersion=result['promptVersion'])
+    except Exception as error:
+        raise unavailable(error) from error
+
+
 class CoachingInput(BaseModel):
     context: dict
     missingSkills: list[str] = Field(default_factory=list, max_length=80)

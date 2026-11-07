@@ -11,6 +11,10 @@
 - [Crawl job công khai](guides/job-crawler.md).
 - [Trạng thái triển khai](guides/implementation-status.md).
 - [Kế hoạch hoàn thiện 5 checklist TH3](plans/th3-completion-roadmap.md): backlog, phụ thuộc, tiêu chí nghiệm thu và mốc bàn giao AI/BI.
+- [Kiểm tra và kế hoạch tư vấn CV–JD, Outline CV](plans/cv-jd-consultation-2026-11-06.md): phần đã có/còn thiếu, backlog P0/P1 và tiêu chí nghiệm thu theo bài video 2–3 phút.
+- [So sánh từng CV với việc làm](guides/cv-review.md): chọn phiên bản CV, xếp hạng job theo đúng CV, đối chiếu bằng chứng, sửa Outline, BI và xuất báo cáo.
+- [Lịch sử thiết kế luồng Job → Tư vấn CV](reports/job-consultation-flow-2026-11-06.md): bản ghi trước khi gỡ checklist bài tập khỏi sản phẩm; xem [hướng dẫn hiện tại](guides/cv-review.md).
+- [Docker E2E và đánh giá theo 6 yêu cầu bài nộp](reports/docker-e2e-assessment-2026-11-06.md): offline/live, dữ liệu giữ qua nâng cấp, đánh giá luồng UI và các việc còn lại trước quay video.
 - [Audit 05/11 và kế hoạch nghiệm thu/refactor UI](plans/th3-release-and-ui-refactor.md): lỗi matching tái hiện được, kết quả chạy lại, ưu tiên P0/P1 và thiết kế từng màn hình.
 - [Triển khai và kiểm chứng 05/11](reports/release-implementation-2026-11-05.md): thay đổi CV-first/UI/CI, kết quả offline/live và điều kiện nghiệm thu còn thiếu.
 - [Triển khai/sao lưu](guides/deployment.md) · [Git/media](guides/git-and-media.md).

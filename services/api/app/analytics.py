@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from .data_quality import canonical_skills, classify_origin, normalized_job
 
 
-def market_dataset(connection, dataset='real', category=None, location=None, source=None, date_from=None, date_to=None):
+def market_dataset(connection, dataset='real', category=None, location=None, source=None, date_from=None, date_to=None, include_candidates=True):
     origins = {(r['entity_type'], r['entity_id']): r['origin'] for r in connection.execute('SELECT * FROM entity_metadata')}
     jobs = []
     for row in connection.execute('SELECT id,data FROM jobs'):
@@ -28,6 +28,8 @@ def market_dataset(connection, dataset='real', category=None, location=None, sou
         jobs.append(job)
     # A canonical source URL is the posting identity; not its imported owner.
     jobs = list({j['sourceUrl'] or j['id']: j for j in jobs}.values())
+    if not include_candidates:
+        return jobs, []
     candidates = []
     for row in connection.execute("SELECT id,email,profile FROM users WHERE role='student'").fetchall():
         profile = json.loads(row['profile'])
